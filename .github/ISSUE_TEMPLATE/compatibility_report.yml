@@ -1,0 +1,59 @@
+name: Compatibility report
+description: Report serialized data, sync, or behavior compatibility drift.
+title: "compat: "
+labels:
+  - compatibility
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What compatibility behavior appears incorrect?
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - update encoding or decoding
+        - state vectors or delete sets
+        - snapshots
+        - relative positions
+        - shared type behavior
+        - undo or redo
+        - attribution or metadata
+        - subdocuments
+        - performance regression
+        - other
+    validations:
+      required: true
+  - type: textarea
+    id: fixture
+    attributes:
+      label: Fixture or payload
+      description: Provide a fixture path, hex payload, or minimal Dart test.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: Describe the expected state, event, or serialized output.
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: Include errors, decoded summaries, or observed state.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Dart SDK, platform, package version or commit, and command.
+    validations:
+      required: true

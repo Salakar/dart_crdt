@@ -1,0 +1,5 @@
+*.iml
+.dart_tool/
+coverage/
+benchmark/
+pubspec.lock

@@ -1,0 +1,103 @@
+{
+  "schemaVersion": 1,
+  "mode": "smoke",
+  "description": "Catastrophic smoke thresholds. These are intentionally loose and should be tightened once stable baselines are collected on CI hardware.",
+  "thresholds": {
+    "update_encoding_round_trip": {
+      "maxMicrosecondsPerIteration": 100000,
+      "reason": "Update encoding smoke should never approach 100ms per iteration."
+    },
+    "text_sequential_insert": {
+      "maxMicrosecondsPerIteration": 100000,
+      "reason": "Sequential text inserts should remain comfortably below 100ms per iteration."
+    },
+    "text_append": {
+      "maxMicrosecondsPerIteration": 100000,
+      "reason": "Append-heavy text workloads should remain comfortably below 100ms per iteration."
+    },
+    "text_prepend": {
+      "maxMicrosecondsPerIteration": 100000,
+      "reason": "Prepend-heavy text workloads should remain comfortably below 100ms per iteration."
+    },
+    "text_middle_insert": {
+      "maxMicrosecondsPerIteration": 100000,
+      "reason": "Middle-insert text workloads should remain comfortably below 100ms per iteration."
+    },
+    "text_random_insert_delete_format": {
+      "maxMicrosecondsPerIteration": 100000,
+      "reason": "Random text edits with formatting should remain comfortably below 100ms per iteration."
+    },
+    "text_fragmented_delta_render": {
+      "maxMicrosecondsPerIteration": 100000,
+      "reason": "Fragmented text delta rendering should remain comfortably below 100ms per iteration."
+    },
+    "delta_apply_shallow": {
+      "maxMicrosecondsPerIteration": 100000,
+      "reason": "Shallow delta application should remain comfortably below 100ms per iteration."
+    },
+    "delta_render_shallow": {
+      "maxMicrosecondsPerIteration": 100000,
+      "reason": "Shallow delta rendering should remain comfortably below 100ms per iteration."
+    },
+    "delta_render_deep": {
+      "maxMicrosecondsPerIteration": 100000,
+      "reason": "Deep delta rendering should remain comfortably below 100ms per iteration."
+    },
+    "array_random_insert_delete_nested": {
+      "maxMicrosecondsPerIteration": 100000,
+      "reason": "Array insert/delete workloads with nested types should remain comfortably below 100ms per iteration."
+    },
+    "map_set_delete_conflicts": {
+      "maxMicrosecondsPerIteration": 100000,
+      "reason": "Map conflict workloads should remain comfortably below 100ms per iteration."
+    },
+    "xml_tree_insert_delete_stringify": {
+      "maxMicrosecondsPerIteration": 100000,
+      "reason": "XML tree insert/delete/stringify workloads should remain comfortably below 100ms per iteration."
+    },
+    "sync_v1_encode_apply_merge_diff": {
+      "maxMicrosecondsPerIteration": 100000,
+      "reason": "V1 sync encode/apply/merge/diff should remain comfortably below 100ms per iteration."
+    },
+    "sync_v2_encode_apply_merge_diff": {
+      "maxMicrosecondsPerIteration": 100000,
+      "reason": "V2 sync encode/apply/merge/diff should remain comfortably below 100ms per iteration."
+    },
+    "sync_update_format_convert": {
+      "maxMicrosecondsPerIteration": 100000,
+      "reason": "Update format conversion should remain comfortably below 100ms per iteration."
+    },
+    "sync_pending_out_of_order_recovery": {
+      "maxMicrosecondsPerIteration": 100000,
+      "reason": "Pending out-of-order update recovery should remain comfortably below 100ms per iteration."
+    },
+    "metadata_id_set_algebra": {
+      "maxMicrosecondsPerIteration": 100000,
+      "reason": "IdSet algebra should remain comfortably below 100ms per iteration."
+    },
+    "metadata_id_map_algebra": {
+      "maxMicrosecondsPerIteration": 100000,
+      "reason": "IdMap algebra should remain comfortably below 100ms per iteration."
+    },
+    "advanced_relative_position_create_resolve": {
+      "maxMicrosecondsPerIteration": 100000,
+      "reason": "Relative position creation and resolution should remain comfortably below 100ms per iteration."
+    },
+    "advanced_snapshot_create_restore_containment": {
+      "maxMicrosecondsPerIteration": 100000,
+      "reason": "Snapshot create/restore/containment should remain comfortably below 100ms per iteration."
+    },
+    "advanced_undo_redo_stack": {
+      "maxMicrosecondsPerIteration": 100000,
+      "reason": "Undo/redo stack workloads should remain comfortably below 100ms per iteration."
+    },
+    "advanced_attribution_diff_render_accept_reject_filter": {
+      "maxMicrosecondsPerIteration": 100000,
+      "reason": "Attribution diff/render/accept/reject/filter workloads should remain comfortably below 100ms per iteration."
+    },
+    "advanced_gc_enabled_vs_disabled": {
+      "maxMicrosecondsPerIteration": 100000,
+      "reason": "GC enabled/disabled delete-heavy workloads should remain comfortably below 100ms per iteration."
+    }
+  }
+}

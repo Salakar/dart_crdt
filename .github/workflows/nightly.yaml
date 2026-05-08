@@ -1,0 +1,57 @@
+name: Nightly
+
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+jobs:
+  long-running-checks:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dart-lang/setup-dart@v1
+
+      - name: Install Melos
+        run: dart pub global activate melos
+
+      - name: Bootstrap
+        run: melos bootstrap
+
+      - name: Validate repository
+        run: melos run validate
+
+      - name: Test
+        run: melos run test
+
+      - name: Coverage
+        run: melos run coverage
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: nightly-coverage
+          path: packages/*/coverage/
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Long random tests
+        run: melos run test:long-random
+
+      - name: Compiled JavaScript smoke
+        run: melos run js:smoke
+
+      - name: Full benchmarks
+        run: melos exec --dir-exists=benchmark -- "dart run benchmark/benchmark.dart --mode=full --thresholds=benchmark/baselines/full_thresholds.json --pretty --output=benchmark/results/full.json"
+
+      - name: Upload benchmark artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: nightly-benchmarks
+          path: packages/*/benchmark/results/*.json
+          if-no-files-found: warn
+          retention-days: 30

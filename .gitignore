@@ -1,0 +1,17 @@
+__MACOSX/
+.DS_Store
+node_modules/
+.env
+.dart_tool/
+.idea/
+.vscode/
+.flutter-plugins-dependencies
+.flutter-plugins
+.flutter-plugins-dependencies
+yjs_clone/
+*.iml
+pubspec.lock
+coverage
+doc/api/
+packages/*/doc/api/
+tmp/

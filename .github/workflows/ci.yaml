@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  dart:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dart-lang/setup-dart@v1
+
+      - name: Install Melos
+        run: dart pub global activate melos
+
+      - name: Bootstrap
+        run: melos bootstrap
+
+      - name: Format
+        run: melos run format
+
+      - name: Analyze
+        run: melos run analyze
+
+      - name: Validate repository
+        run: melos run validate
+
+      - name: Documentation
+        run: melos run docs
+
+      - name: Test
+        run: melos run test
+
+      - name: Examples
+        run: melos run examples
+
+      - name: Benchmark smoke
+        run: melos run benchmark:smoke
+
+      - name: Compiled JavaScript smoke
+        run: melos run js:smoke
+
+      - name: Coverage
+        run: melos run coverage
+
+      - name: Release validation
+        run: melos run release:validate
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage
+          path: packages/*/coverage/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Publish dry-run
+        run: melos run publish:dry-run

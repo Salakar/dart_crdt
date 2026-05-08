@@ -1,0 +1,103 @@
+{
+  "schemaVersion": 1,
+  "mode": "full",
+  "description": "Scheduled full-run catastrophic thresholds. These are loose regression gates for CI hardware variance and should be tightened after stable historical artifacts exist.",
+  "thresholds": {
+    "update_encoding_round_trip": {
+      "maxMicrosecondsPerIteration": 500000,
+      "reason": "Full update encoding should not approach 500ms per iteration."
+    },
+    "text_sequential_insert": {
+      "maxMicrosecondsPerIteration": 500000,
+      "reason": "Full sequential text insert should not approach 500ms per iteration."
+    },
+    "text_append": {
+      "maxMicrosecondsPerIteration": 500000,
+      "reason": "Full text append should not approach 500ms per iteration."
+    },
+    "text_prepend": {
+      "maxMicrosecondsPerIteration": 500000,
+      "reason": "Full text prepend should not approach 500ms per iteration."
+    },
+    "text_middle_insert": {
+      "maxMicrosecondsPerIteration": 500000,
+      "reason": "Full text middle insert should not approach 500ms per iteration."
+    },
+    "text_random_insert_delete_format": {
+      "maxMicrosecondsPerIteration": 500000,
+      "reason": "Full random text edits should not approach 500ms per iteration."
+    },
+    "text_fragmented_delta_render": {
+      "maxMicrosecondsPerIteration": 500000,
+      "reason": "Full fragmented delta rendering should not approach 500ms per iteration."
+    },
+    "delta_apply_shallow": {
+      "maxMicrosecondsPerIteration": 500000,
+      "reason": "Full shallow delta apply should not approach 500ms per iteration."
+    },
+    "delta_render_shallow": {
+      "maxMicrosecondsPerIteration": 500000,
+      "reason": "Full shallow delta render should not approach 500ms per iteration."
+    },
+    "delta_render_deep": {
+      "maxMicrosecondsPerIteration": 500000,
+      "reason": "Full deep delta render should not approach 500ms per iteration."
+    },
+    "array_random_insert_delete_nested": {
+      "maxMicrosecondsPerIteration": 500000,
+      "reason": "Full nested array workload should not approach 500ms per iteration."
+    },
+    "map_set_delete_conflicts": {
+      "maxMicrosecondsPerIteration": 500000,
+      "reason": "Full map conflict workload should not approach 500ms per iteration."
+    },
+    "xml_tree_insert_delete_stringify": {
+      "maxMicrosecondsPerIteration": 500000,
+      "reason": "Full XML tree workload should not approach 500ms per iteration."
+    },
+    "sync_v1_encode_apply_merge_diff": {
+      "maxMicrosecondsPerIteration": 500000,
+      "reason": "Full V1 sync workload should not approach 500ms per iteration."
+    },
+    "sync_v2_encode_apply_merge_diff": {
+      "maxMicrosecondsPerIteration": 500000,
+      "reason": "Full V2 sync workload should not approach 500ms per iteration."
+    },
+    "sync_update_format_convert": {
+      "maxMicrosecondsPerIteration": 500000,
+      "reason": "Full update conversion workload should not approach 500ms per iteration."
+    },
+    "sync_pending_out_of_order_recovery": {
+      "maxMicrosecondsPerIteration": 500000,
+      "reason": "Full pending recovery workload should not approach 500ms per iteration."
+    },
+    "metadata_id_set_algebra": {
+      "maxMicrosecondsPerIteration": 500000,
+      "reason": "Full IdSet algebra workload should not approach 500ms per iteration."
+    },
+    "metadata_id_map_algebra": {
+      "maxMicrosecondsPerIteration": 500000,
+      "reason": "Full IdMap algebra workload should not approach 500ms per iteration."
+    },
+    "advanced_relative_position_create_resolve": {
+      "maxMicrosecondsPerIteration": 500000,
+      "reason": "Full relative position workload should not approach 500ms per iteration."
+    },
+    "advanced_snapshot_create_restore_containment": {
+      "maxMicrosecondsPerIteration": 500000,
+      "reason": "Full snapshot workload should not approach 500ms per iteration."
+    },
+    "advanced_undo_redo_stack": {
+      "maxMicrosecondsPerIteration": 500000,
+      "reason": "Full undo/redo workload should not approach 500ms per iteration."
+    },
+    "advanced_attribution_diff_render_accept_reject_filter": {
+      "maxMicrosecondsPerIteration": 500000,
+      "reason": "Full attribution workload should not approach 500ms per iteration."
+    },
+    "advanced_gc_enabled_vs_disabled": {
+      "maxMicrosecondsPerIteration": 500000,
+      "reason": "Full GC workload should not approach 500ms per iteration."
+    }
+  }
+}

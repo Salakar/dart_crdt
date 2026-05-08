@@ -1,0 +1,71 @@
+name: ycrdt
+
+packages:
+  - packages/*
+
+command:
+  bootstrap:
+    usePubspecOverrides: true
+
+scripts:
+  format:
+    description: Check Dart formatting across the repository.
+    run: dart format --set-exit-if-changed .
+
+  analyze:
+    description: Run static analysis in every package.
+    run: melos exec -- "dart analyze ."
+
+  validate:
+    description: Validate repository policy checks.
+    run: dart run tool/validate_repository.dart
+
+  test:
+    description: Run all package tests.
+    run: melos exec --dir-exists=test -- "dart test"
+
+  test:long-random:
+    description: Run long deterministic random convergence and fuzz tests.
+    run: dart run tool/run_long_random_tests.dart
+
+  benchmark:smoke:
+    description: Run the quick benchmark smoke suite.
+    run: melos exec --dir-exists=benchmark -- "dart run benchmark/benchmark.dart --mode=smoke"
+
+  benchmark:full:
+    description: Run the full benchmark suite.
+    run: melos exec --dir-exists=benchmark -- "dart run benchmark/benchmark.dart --mode=full"
+
+  js:smoke:
+    description: Compile and run web-compatible JavaScript smoke checks.
+    run: melos exec --dir-exists=tool -- "dart run tool/run_js_smoke.dart"
+
+  examples:
+    description: Run all package examples.
+    run: |
+      melos exec --dir-exists=example -- "dart run example/main.dart"
+      melos exec --dir-exists=example -- "dart run example/basic_document.dart"
+      melos exec --dir-exists=example -- "dart run example/update_exchange.dart"
+      melos exec --dir-exists=example -- "dart run example/text_delta.dart"
+      melos exec --dir-exists=example -- "dart run example/undo_redo.dart"
+      melos exec --dir-exists=example -- "dart run example/relative_positions.dart"
+      melos exec --dir-exists=example -- "dart run example/snapshots.dart"
+
+  docs:
+    description: Generate API documentation and validate doc links.
+    run: melos exec -- "dart doc --validate-links"
+
+  coverage:
+    description: Run tests, generate LCOV, and enforce coverage thresholds.
+    run: |
+      melos exec --dir-exists=test -- "dart test --coverage=coverage"
+      melos exec --dir-exists=test -- "dart run coverage:format_coverage --lcov --check-ignore --in=coverage --out=coverage/lcov.info --report-on=lib --package=."
+      dart run tool/validate_coverage.dart
+
+  release:validate:
+    description: Validate release docs and package metadata without credentials.
+    run: dart run tool/validate_release.dart
+
+  publish:dry-run:
+    description: Validate packages before pub.dev publication.
+    run: melos exec --no-private -- "dart pub publish --dry-run"
