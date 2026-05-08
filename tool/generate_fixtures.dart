@@ -4,30 +4,30 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
-import '../packages/ycrdt/lib/src/binary/any_value.dart';
-import '../packages/ycrdt/lib/src/binary/byte_writer.dart';
-import '../packages/ycrdt/lib/src/content/content.dart';
-import '../packages/ycrdt/lib/src/doc/doc.dart';
-import '../packages/ycrdt/lib/src/metadata/content_attribute.dart';
-import '../packages/ycrdt/lib/src/metadata/content_ids.dart';
-import '../packages/ycrdt/lib/src/metadata/content_map.dart';
-import '../packages/ycrdt/lib/src/metadata/content_metadata_codec.dart';
-import '../packages/ycrdt/lib/src/metadata/id_map.dart';
-import '../packages/ycrdt/lib/src/metadata/id_map_codec.dart';
-import '../packages/ycrdt/lib/src/metadata/id_set.dart';
-import '../packages/ycrdt/lib/src/relative_position/relative_position.dart';
-import '../packages/ycrdt/lib/src/snapshot/snapshot.dart';
-import '../packages/ycrdt/lib/src/structs/abstract_struct.dart';
-import '../packages/ycrdt/lib/src/structs/id.dart';
-import '../packages/ycrdt/lib/src/sync/block_set.dart';
-import '../packages/ycrdt/lib/src/sync/state_update.dart';
-import '../packages/ycrdt/lib/src/sync/state_vector.dart';
+import '../packages/dart_crdt/lib/src/binary/any_value.dart';
+import '../packages/dart_crdt/lib/src/binary/byte_writer.dart';
+import '../packages/dart_crdt/lib/src/content/content.dart';
+import '../packages/dart_crdt/lib/src/doc/doc.dart';
+import '../packages/dart_crdt/lib/src/metadata/content_attribute.dart';
+import '../packages/dart_crdt/lib/src/metadata/content_ids.dart';
+import '../packages/dart_crdt/lib/src/metadata/content_map.dart';
+import '../packages/dart_crdt/lib/src/metadata/content_metadata_codec.dart';
+import '../packages/dart_crdt/lib/src/metadata/id_map.dart';
+import '../packages/dart_crdt/lib/src/metadata/id_map_codec.dart';
+import '../packages/dart_crdt/lib/src/metadata/id_set.dart';
+import '../packages/dart_crdt/lib/src/relative_position/relative_position.dart';
+import '../packages/dart_crdt/lib/src/snapshot/snapshot.dart';
+import '../packages/dart_crdt/lib/src/structs/abstract_struct.dart';
+import '../packages/dart_crdt/lib/src/structs/id.dart';
+import '../packages/dart_crdt/lib/src/sync/block_set.dart';
+import '../packages/dart_crdt/lib/src/sync/state_update.dart';
+import '../packages/dart_crdt/lib/src/sync/state_vector.dart';
 
 part 'fixture_generation/compat_fixture_builders.dart';
 part 'fixture_generation/compat_fixture_cases.dart';
 part 'fixture_generation/compat_fixture_model.dart';
 
-const _defaultOutput = 'packages/ycrdt/test/fixtures/compat';
+const _defaultOutput = 'packages/dart_crdt/test/fixtures/compat';
 
 const _requiredCategories = [
   'empty-docs',

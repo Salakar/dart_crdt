@@ -1,4 +1,4 @@
-name: ycrdt_workspace
+name: dart_crdt_workspace
 publish_to: none
 
 environment:

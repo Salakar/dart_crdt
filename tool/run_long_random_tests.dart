@@ -1,6 +1,6 @@
 import 'dart:io';
 
-const _packageRoot = 'packages/ycrdt';
+const _packageRoot = 'packages/dart_crdt';
 const _longRandomTests = [
   'test/integration/random_sequence_convergence_test.dart',
   'test/integration/random_map_convergence_test.dart',
@@ -21,7 +21,7 @@ Future<void> main(List<String> args) async {
     await _runSuite(
       label: 'long random convergence',
       tests: _longRandomTests,
-      environment: const {'YCRDT_LONG_RANDOM': '1'},
+      environment: const {'DART_CRDT_LONG_RANDOM': '1'},
     ),
   );
 
@@ -30,7 +30,7 @@ Future<void> main(List<String> args) async {
       await _runSuite(
         label: 'long invalid-input fuzz',
         tests: _longFuzzTests,
-        environment: const {'YCRDT_LONG_FUZZ': '1'},
+        environment: const {'DART_CRDT_LONG_FUZZ': '1'},
       ),
     );
   }

@@ -19,8 +19,8 @@ section.
 ## Release Checklist
 
 1. Choose the next version according to Semantic Versioning.
-2. Update `packages/ycrdt/pubspec.yaml`.
-3. Update `packages/ycrdt/CHANGELOG.md` with API changes, compatibility
+2. Update `packages/dart_crdt/pubspec.yaml`.
+3. Update `packages/dart_crdt/CHANGELOG.md` with API changes, compatibility
    summary, benchmark summary, known limitations, and verification evidence.
 4. Run the credential-free release validation:
 
@@ -47,7 +47,7 @@ section.
 6. For release candidates, run `melos run benchmark:full` and attach the JSON
    result summary to the release notes.
 7. Confirm `dart pub publish --dry-run` has no actionable warnings from
-   `packages/ycrdt`.
+   `packages/dart_crdt`.
 8. Tag and publish only after the checklist is complete and the package archive
    contents are reviewed.
 

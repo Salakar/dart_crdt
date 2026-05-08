@@ -1,7 +1,7 @@
 import 'dart:io';
 
-const _defaultPackageRoot = 'packages/ycrdt';
-const _defaultLcovPath = 'packages/ycrdt/coverage/lcov.info';
+const _defaultPackageRoot = 'packages/dart_crdt';
+const _defaultLcovPath = 'packages/dart_crdt/coverage/lcov.info';
 const _overallThreshold = 95.0;
 const _strictThreshold = 100.0;
 

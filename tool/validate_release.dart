@@ -1,6 +1,6 @@
 import 'dart:io';
 
-const _packageRoot = 'packages/ycrdt';
+const _packageRoot = 'packages/dart_crdt';
 const _requiredPubspecFields = {
   'name:',
   'description:',

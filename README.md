@@ -1,7 +1,7 @@
 <p align="center">
-<img src="assets/logo.png" alt="ycrdt logo" width="160" height="160"/>
+<img src="assets/logo.png" alt="dart_crdt logo" width="160" height="160"/>
 </p>
-<h1 align="center">ycrdt</h1>
+<h1 align="center">dart_crdt</h1>
 <hr>
 
 <p align="center">
@@ -10,7 +10,7 @@
 
 ## Overview
 
-`ycrdt` is a pure Dart CRDT package for local-first collaborative data
+`dart_crdt` is a pure Dart CRDT package for local-first collaborative data
 structures. It is designed for Dart VM, Flutter, and web runtimes, with
 deterministic binary update encoding and package-native APIs for documents,
 shared types, rich text, undo/redo, snapshots, and relative positions.
@@ -18,7 +18,7 @@ shared types, rich text, undo/redo, snapshots, and relative positions.
 ## Quick Example
 
 ```dart
-import 'package:ycrdt/ycrdt.dart';
+import 'package:dart_crdt/dart_crdt.dart';
 
 void main() {
   final doc = Doc();
@@ -46,11 +46,11 @@ This repository is a Melos workspace.
 
 | Path | Purpose |
 | --- | --- |
-| `packages/ycrdt` | The publishable `ycrdt` package. |
-| `packages/ycrdt/benchmark` | Benchmark harnesses and regression thresholds. |
+| `packages/dart_crdt` | The publishable `dart_crdt` package. |
+| `packages/dart_crdt/benchmark` | Benchmark harnesses and regression thresholds. |
 | `tool/` | Repository validation and coverage tools. |
 
-For package usage, start with [packages/ycrdt/README.md](packages/ycrdt/README.md).
+For package usage, start with [packages/dart_crdt/README.md](packages/dart_crdt/README.md).
 
 ## Development
 

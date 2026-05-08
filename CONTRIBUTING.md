@@ -1,6 +1,6 @@
 # Contributing
 
-This repository is a Melos workspace for the `ycrdt` Dart package. Keep changes
+This repository is a Melos workspace for the `dart_crdt` Dart package. Keep changes
 small, tested, and package-native.
 
 ## Setup
@@ -12,7 +12,7 @@ dart pub global activate melos
 melos bootstrap
 ```
 
-Use the SDK constraint in `packages/ycrdt/pubspec.yaml` as the minimum supported
+Use the SDK constraint in `packages/dart_crdt/pubspec.yaml` as the minimum supported
 Dart version for local development and CI.
 
 ## Required Checks
@@ -42,11 +42,11 @@ positions, undo/redo, attribution, or garbage collection.
 
 Add tests with every behavior change:
 
-- Unit tests belong in `packages/ycrdt/test/unit/`.
-- Integration and convergence tests belong in `packages/ycrdt/test/integration/`.
-- Shared helpers belong in `packages/ycrdt/test/helpers/`.
-- Test data belongs in `packages/ycrdt/test/fixtures/`.
-- Compatibility fixtures belong in `packages/ycrdt/test/fixtures/compat/`.
+- Unit tests belong in `packages/dart_crdt/test/unit/`.
+- Integration and convergence tests belong in `packages/dart_crdt/test/integration/`.
+- Shared helpers belong in `packages/dart_crdt/test/helpers/`.
+- Test data belongs in `packages/dart_crdt/test/fixtures/`.
+- Compatibility fixtures belong in `packages/dart_crdt/test/fixtures/compat/`.
 
 Keep each test file focused on one logical unit. If a test file grows large,
 split it by feature or scenario before adding more cases.
