@@ -9,7 +9,7 @@ than a patch on an older line.
 ## Reporting A Vulnerability
 
 Report suspected vulnerabilities privately using GitHub Security Advisories:
-<https://github.com/mikediarmid/ycrdt/security/advisories/new>.
+<https://github.com/salakar/ycrdt/security/advisories/new>.
 
 Do not open a public issue, discussion, or pull request for a suspected
 vulnerability until a fix or mitigation is available.

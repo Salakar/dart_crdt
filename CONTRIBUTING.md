@@ -97,7 +97,7 @@ release:validate` and `melos run publish:dry-run`.
 ## Security Handling
 
 Report vulnerabilities privately using GitHub Security Advisories:
-<https://github.com/mikediarmid/ycrdt/security/advisories/new>.
+<https://github.com/salakar/ycrdt/security/advisories/new>.
 
 Do not open public issues for suspected vulnerabilities. Maintainers will
 confirm the report, coordinate a fix, prepare tests, publish a patched release

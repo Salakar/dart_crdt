@@ -23,7 +23,7 @@ void main() {
   test('package README uses a dartdoc-safe examples link', () {
     final readme = File('README.md').readAsStringSync();
 
-    expect(readme, contains('https://github.com/mikediarmid/ycrdt'));
+    expect(readme, contains('https://github.com/salakar/ycrdt'));
     expect(readme, isNot(contains('](example/)')));
   });
 }

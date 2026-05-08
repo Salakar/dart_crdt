@@ -5,7 +5,7 @@
 <hr>
 
 <p align="center">
-<a href="https://github.com/mikediarmid/ycrdt/blob/main/COVERAGE.md">Coverage: 95.21%</a>
+<a href="https://github.com/salakar/ycrdt/blob/main/COVERAGE.md">Coverage: 95.21%</a>
 </p>
 
 ## Overview
@@ -30,7 +30,7 @@ compatibility-oriented fixtures for VM, Flutter, and web runtimes.
 
 ```yaml
 dependencies:
-  ycrdt: ^0.0.0-dev.1
+  ycrdt: ^0.1.0
 ```
 
 ```dart
@@ -206,18 +206,18 @@ checks.
 
 - Pub package: <https://pub.dev/packages/ycrdt>
 - API docs: <https://pub.dev/documentation/ycrdt/latest/>
-- Repository: <https://github.com/mikediarmid/ycrdt>
-- Runnable examples: <https://github.com/mikediarmid/ycrdt/tree/main/packages/ycrdt/example>
+- Repository: <https://github.com/salakar/ycrdt>
+- Runnable examples: <https://github.com/salakar/ycrdt/tree/main/packages/ycrdt/example>
 
 ## Stability
 
-`0.0.0-dev.1` is a development release. Public APIs may change before `1.0.0`,
+`0.1.0` is a pre-1.0 release. Public APIs may change before `1.0.0`,
 but binary behavior is covered by regression fixtures and compatibility tests.
 
 ## Contributing
 
 See the repository
-[CONTRIBUTING.md](https://github.com/mikediarmid/ycrdt/blob/main/CONTRIBUTING.md)
+[CONTRIBUTING.md](https://github.com/salakar/ycrdt/blob/main/CONTRIBUTING.md)
 for local setup, formatting, analyzer, tests, coverage, benchmarks, and pull
 request expectations.
 

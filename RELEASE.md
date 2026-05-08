@@ -22,15 +22,13 @@ section.
 2. Update `packages/ycrdt/pubspec.yaml`.
 3. Update `packages/ycrdt/CHANGELOG.md` with API changes, compatibility
    summary, benchmark summary, known limitations, and verification evidence.
-4. Update `PARITY.md` for implementation, tests, compatibility, docs, and
-   benchmark status.
-5. Run the credential-free release validation:
+4. Run the credential-free release validation:
 
    ```sh
    melos run release:validate
    ```
 
-6. Run the full release gate:
+5. Run the full release gate:
 
    ```sh
    melos run format
@@ -46,11 +44,11 @@ section.
    melos run publish:dry-run
    ```
 
-7. For release candidates, run `melos run benchmark:full` and attach the JSON
+6. For release candidates, run `melos run benchmark:full` and attach the JSON
    result summary to the release notes.
-8. Confirm `dart pub publish --dry-run` has no actionable warnings from
+7. Confirm `dart pub publish --dry-run` has no actionable warnings from
    `packages/ycrdt`.
-9. Tag and publish only after the checklist is complete and the package archive
+8. Tag and publish only after the checklist is complete and the package archive
    contents are reviewed.
 
 ## Changelog Requirements
@@ -75,15 +73,15 @@ authenticated `dart pub publish` command manually.
 
 ## Current Readiness Notes
 
-The current readiness audit has no open release blockers. Evidence recorded in
-`PARITY.md` includes full tests, long random/fuzz validation, coverage
-thresholds, full benchmarks, documentation link validation, compiled JavaScript
-smoke checks, release validation, and pub.dev dry-run validation.
+The current readiness audit has no open release blockers. Release evidence
+includes full tests, long random/fuzz validation, coverage thresholds, full
+benchmarks, documentation link validation, compiled web smoke checks, release
+validation, and pub.dev dry-run validation.
 
 Benchmark summary: the full suite covered 24 benchmarks. The slowest cases were
-`metadata_id_map_algebra` at 43.64 ms/iteration and
-`array_random_insert_delete_nested` at 38.38 ms/iteration, both below the
+`metadata_id_map_algebra` at 74.75 ms/iteration and
+`array_random_insert_delete_nested` at 63.93 ms/iteration, both below the
 500 ms full-suite threshold.
 
-Known limitation: the package remains at `0.0.0-dev.1` until the maintainer
-chooses the final release version and publishes from a clean tracked git state.
+Known limitation: `0.1.0` is a pre-1.0 release and is not a stable `1.0.0` API
+contract.

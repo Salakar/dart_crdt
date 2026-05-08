@@ -1,10 +1,10 @@
 name: ycrdt
 description: A Dart CRDT package for local-first collaborative data structures.
-version: 0.0.0-dev.1
-homepage: https://github.com/mikediarmid/ycrdt
-repository: https://github.com/mikediarmid/ycrdt
-issue_tracker: https://github.com/mikediarmid/ycrdt/issues
-documentation: https://github.com/mikediarmid/ycrdt/tree/main/packages/ycrdt
+version: 0.1.0
+homepage: https://github.com/salakar/ycrdt
+repository: https://github.com/salakar/ycrdt
+issue_tracker: https://github.com/salakar/ycrdt/issues
+documentation: https://github.com/salakar/ycrdt/tree/main/packages/ycrdt
 
 environment:
   sdk: ">=3.6.0 <4.0.0"

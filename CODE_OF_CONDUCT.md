@@ -23,4 +23,4 @@ technical work.
 Maintainers may edit or hide comments, close or lock issues, reject pull
 requests, or block participants who violate this code. Security-sensitive
 conduct issues should be reported privately through GitHub Security Advisories:
-<https://github.com/mikediarmid/ycrdt/security/advisories/new>.
+<https://github.com/salakar/ycrdt/security/advisories/new>.
