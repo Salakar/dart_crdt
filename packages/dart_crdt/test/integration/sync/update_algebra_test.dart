@@ -51,6 +51,19 @@ void main() {
       });
     });
 
+    test('encodes state vectors directly from updates', () {
+      final a = encodeStateAsUpdate(_docWithItem(1, 'a'));
+      final b = encodeStateAsUpdate(_docWithItem(2, 'b'));
+
+      expect(
+        decodeStateVector(encodeStateVectorFromUpdate(mergeUpdates([a, b]))),
+        {
+          ClientId(1): Clock(1),
+          ClientId(2): Clock(1),
+        },
+      );
+    });
+
     test('does not emit first-written skip output for unresolved updates', () {
       final unresolved = encodeStateAsUpdate(
         _docWithItem(1, 'abc'),
@@ -59,6 +72,9 @@ void main() {
 
       expect(mergeUpdates([unresolved]), [0, 0]);
       expect(diffUpdate(unresolved, encodeStateVector(const {})), [0, 0]);
+      expect(decodeStateVector(encodeStateVectorFromUpdate(unresolved)), {
+        ClientId(1): Clock(3),
+      });
     });
   });
 
@@ -72,6 +88,10 @@ void main() {
       applyUpdateV2(target, diffUpdateV2(merged, encodeStateVector(const {})));
 
       expect(target.store.stateVector(), {
+        ClientId(1): Clock(1),
+        ClientId(2): Clock(1),
+      });
+      expect(decodeStateVector(encodeStateVectorFromUpdateV2(merged)), {
         ClientId(1): Clock(1),
         ClientId(2): Clock(1),
       });

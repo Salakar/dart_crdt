@@ -1,6 +1,6 @@
 name: dart_crdt
 description: A Dart CRDT package for local-first collaborative data structures.
-version: 0.1.0
+version: 0.2.0
 homepage: https://github.com/salakar/ycrdt
 repository: https://github.com/salakar/ycrdt
 issue_tracker: https://github.com/salakar/ycrdt/issues

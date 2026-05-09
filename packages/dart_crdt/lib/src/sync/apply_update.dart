@@ -213,6 +213,18 @@ bool _prepareItem(
   StructStore store,
   Map<ClientId, Clock> missing,
 ) {
+  var hasMissingDependency = false;
+  for (final id in [item.origin, item.rightOrigin]) {
+    if (id != null && store.itemContaining(id) == null) {
+      missing[id.client] = store.getClock(id.client);
+      hasMissingDependency = true;
+    }
+  }
+  if (hasMissingDependency) {
+    return false;
+  }
+
+  _cleanItemBoundaries(item, store);
   if (item.parent != null) {
     return true;
   }
@@ -221,12 +233,20 @@ bool _prepareItem(
     item.parent = parent;
     return true;
   }
-  for (final id in [item.origin, item.rightOrigin]) {
-    if (id != null && store.itemContaining(id) == null) {
-      missing[id.client] = store.getClock(id.client);
-    }
-  }
   return false;
+}
+
+void _cleanItemBoundaries(Item item, StructStore store) {
+  final origin = item.origin;
+  if (origin != null) {
+    store.cleanEnd(origin);
+    item.left = store.itemContaining(origin);
+  }
+  final rightOrigin = item.rightOrigin;
+  if (rightOrigin != null) {
+    store.cleanStart(rightOrigin);
+    item.right = store.itemContaining(rightOrigin);
+  }
 }
 
 ItemParent? _linkedParent(Item item, StructStore store) {

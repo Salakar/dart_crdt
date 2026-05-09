@@ -37,6 +37,31 @@ void main() {
       );
     });
 
+    test('inserts XML children after a reference node', () {
+      final fragment = SharedType(kind: SharedTypeKind.xmlFragment);
+      final first = SharedType(kind: SharedTypeKind.xmlElement, name: 'first');
+      final middle =
+          SharedType(kind: SharedTypeKind.xmlElement, name: 'middle');
+      final last = SharedType(kind: SharedTypeKind.xmlElement, name: 'last');
+
+      fragment
+        ..insertXmlAfter(null, [middle])
+        ..insertXmlAfter(null, [first])
+        ..insertXmlAfter(middle, [last]);
+
+      expect(fragment.xmlChildren.toList(), [first, middle, last]);
+      expect(first.nextSibling, same(middle));
+      expect(last.previousSibling, same(middle));
+      expect(fragment.toXmlString(), '<first/><middle/><last/>');
+      expect(
+        () => fragment.insertXmlAfter(
+          SharedType(kind: SharedTypeKind.xmlElement, name: 'detached'),
+          [SharedType(kind: SharedTypeKind.xmlElement, name: 'unused')],
+        ),
+        throwsStateError,
+      );
+    });
+
     test('walks nested trees and clones independently', () {
       final fragment = SharedType(kind: SharedTypeKind.xmlFragment);
       final section = fragment.appendXmlElement('section');

@@ -10,7 +10,7 @@ typedef RelativePositionContentLength = int Function(Item item);
 ///
 /// ```dart
 /// final doc = Doc();
-/// final body = doc.get('body', SharedTypeKind.text);
+/// final body = doc.getText('body');
 /// body.insertText(0, 'abc');
 ///
 /// final position = createRelativePositionFromTypeIndex(body, 1);

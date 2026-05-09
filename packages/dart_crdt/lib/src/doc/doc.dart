@@ -22,9 +22,13 @@ part 'doc_random.dart';
 part 'doc_events.dart';
 part 'doc_gc.dart';
 part 'doc_formatting.dart';
+part 'doc_root_helpers.dart';
 part 'shared_map.dart';
 part 'shared_sequence.dart';
 part 'shared_text.dart';
+part 'shared_text_store_mutation.dart';
+part 'shared_text_store_sync.dart';
+part 'shared_text_store_target.dart';
 part 'shared_type.dart';
 part 'shared_xml.dart';
 part 'transaction.dart';
@@ -36,7 +40,7 @@ part 'transaction.dart';
 ///
 /// ```dart
 /// final doc = Doc();
-/// final body = doc.get('body', SharedTypeKind.text);
+/// final body = doc.getText('body');
 ///
 /// doc.transact((transaction) {
 ///   body.insertText(0, 'Hello');

@@ -21,6 +21,7 @@ compatibility-oriented fixtures for VM, Flutter, and web runtimes.
 | Area | Support |
 | --- | --- |
 | Documents | Client IDs, transactions, roots, observers, lifecycle events, and subdocuments. |
+| Presence | Awareness state, local presence fields, update exchange, and offline removals. |
 | Shared types | Arrays, maps, text, XML-like trees, nested types, embeds, and attributes. |
 | Sync | Deterministic V1/V2 updates, state vectors, merge/diff helpers, update conversion, and update application. |
 | Editing | Rich-text deltas, snapshots, relative positions, undo/redo, and attribution metadata. |
@@ -30,7 +31,7 @@ compatibility-oriented fixtures for VM, Flutter, and web runtimes.
 
 ```yaml
 dependencies:
-  dart_crdt: ^0.1.0
+  dart_crdt: ^0.2.0
 ```
 
 ```dart
@@ -43,7 +44,7 @@ Create a document and mutate a shared text type:
 
 ```dart
 final doc = Doc();
-final text = doc.get('body', SharedTypeKind.text);
+final text = doc.getText('body');
 
 text.insertText(0, 'Hello, local-first Dart.');
 
@@ -54,11 +55,11 @@ Shared arrays, maps, text, XML fragments/elements/text, and nested shared types
 are available through `SharedType` APIs.
 
 ```dart
-final list = doc.get('items', SharedTypeKind.array);
+final list = doc.getArray('items');
 list.push('one');
 list.push(SharedType(kind: SharedTypeKind.map, name: 'nested'));
 
-final map = doc.get('settings');
+final map = doc.getMap('settings');
 map.setAttr('theme', 'light');
 ```
 
@@ -69,18 +70,14 @@ are idempotent and can be safely applied more than once.
 
 ```dart
 final local = Doc(clientId: ClientId(1));
-local.store.add(
-  Item(
-    id: Id(client: ClientId(1), clock: Clock(0)),
-    parent: local.itemParentForKey('root'),
-    content: ContentString('sync'),
-  ),
-);
+local.getText('root').insertText(0, 'sync');
 
 final update = encodeStateAsUpdate(local);
 
 final remote = Doc(clientId: ClientId(9));
 applyUpdate(remote, update);
+
+print(remote.getText('root').toPlainText()); // sync
 ```
 
 V2 update helpers are also available:
@@ -90,13 +87,43 @@ final updateV2 = encodeStateAsUpdateV2(local);
 applyUpdateV2(remote, updateV2);
 ```
 
+Providers can also merge updates, diff them against a state vector, and inspect
+an update's state vector without first materializing a document:
+
+```dart
+final merged = mergeUpdates([update]);
+final stateVector = encodeStateVectorFromUpdate(merged);
+final missing = diffUpdate(merged, stateVector);
+```
+
+## Awareness And Presence
+
+`Awareness` tracks ephemeral presence state such as users, cursors, selections,
+and online/offline status. It is provider-neutral: transports can broadcast the
+encoded updates over WebSocket, WebRTC, local storage, isolates, or any other
+message channel.
+
+```dart
+final local = Awareness(localClientId: ClientId(1));
+final remote = Awareness(localClientId: ClientId(2));
+
+local.setLocalState({
+  'user': {'name': 'Ada'},
+  'cursor': 7,
+});
+
+final update = encodeAwarenessUpdate(local);
+applyAwarenessUpdate(remote, update);
+print(remote.states[ClientId(1)]?.toObject());
+```
+
 ## Rich Text And Deltas
 
 Shared text supports formatting attributes and delta rendering.
 
 ```dart
 final doc = Doc();
-final text = doc.get('body', SharedTypeKind.text);
+final text = doc.getText('body');
 
 text.insertText(
   0,
@@ -131,13 +158,7 @@ final doc = Doc(gc: false, clientId: ClientId(9));
 final undoManager = UndoManager(doc);
 final source = Doc(clientId: ClientId(1));
 
-source.store.add(
-  Item(
-    id: Id(client: ClientId(1), clock: Clock(0)),
-    parent: source.itemParentForKey('root'),
-    content: ContentString('draft'),
-  ),
-);
+source.getText('root').insertText(0, 'draft');
 
 applyUpdate(doc, encodeStateAsUpdate(source));
 
@@ -156,16 +177,10 @@ the network, and resolved against a document later.
 
 ```dart
 final source = Doc(clientId: ClientId(1));
-source.store.add(
-  Item(
-    id: Id(client: ClientId(1), clock: Clock(0)),
-    parent: source.itemParentForKey('body'),
-    content: ContentString('hello'),
-  ),
-);
+source.getText('body').insertText(0, 'hello');
 
 final doc = Doc();
-final text = doc.get('body', SharedTypeKind.text);
+final text = doc.getText('body');
 applyUpdate(doc, encodeStateAsUpdate(source));
 
 final position = createRelativePositionFromTypeIndex(text, 2);
@@ -211,7 +226,7 @@ checks.
 
 ## Stability
 
-`0.1.0` is a pre-1.0 release. Public APIs may change before `1.0.0`,
+`0.2.0` is a pre-1.0 release. Public APIs may change before `1.0.0`,
 but binary behavior is covered by regression fixtures and compatibility tests.
 
 ## Contributing

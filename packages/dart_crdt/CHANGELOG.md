@@ -1,5 +1,36 @@
 # Changelog
 
+## 0.2.0
+
+Adds the first production-oriented sync path for high-level shared text edits
+and rounds out several public convenience APIs.
+
+### API Changes
+
+- Added provider-neutral `Awareness` presence state with binary update
+  encoding, application, and offline removal helpers.
+- Added typed root helpers: `getMap`, `getArray`, `getText`, and
+  `getXmlFragment`.
+- Added update-only state-vector helpers for V1 and V2 updates.
+- Added `EventHandler.once`.
+- Added XML child insertion after a reference node.
+
+### Fixes
+
+- Fixed root `SharedText.insertText` and `deleteText` so high-level text edits
+  produce CRDT structs, encode into V1/V2 state updates, apply on remote
+  documents, and converge for concurrent inserts.
+- Fixed update integration to clean item boundaries for middle text inserts.
+- Updated README and examples to use the public shared text API instead of raw
+  `Item(ContentString(...))` setup.
+
+### Verification
+
+- `melos run analyze --no-select`
+- `melos run test --no-select`
+- `dart run tool/validate_repository.dart`
+- `dart pub publish --dry-run`
+
 ## 0.1.0
 
 Initial public release with package metadata, documentation, tests,

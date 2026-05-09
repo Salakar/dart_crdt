@@ -72,6 +72,28 @@ void main() {
       expect(handler.listenerCount, 3);
     });
 
+    test('dispatches one-shot listeners once and then cancels them', () {
+      final handler = EventHandler<String>();
+      final calls = <String>[];
+      final subscription = handler.once((event) {
+        calls.add('once:$event');
+        handler.emit('nested');
+      });
+      handler.add((event) => calls.add('persistent:$event'));
+
+      handler.emit('a');
+      handler.emit('b');
+
+      expect(calls, [
+        'once:a',
+        'persistent:nested',
+        'persistent:a',
+        'persistent:b',
+      ]);
+      expect(subscription.isActive, isFalse);
+      expect(handler.listenerCount, 1);
+    });
+
     test('skips listeners removed before their dispatch turn', () {
       final handler = EventHandler<String>();
       final calls = <String>[];

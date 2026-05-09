@@ -4,7 +4,7 @@ import 'package:dart_crdt/dart_crdt.dart';
 
 void main() {
   final doc = Doc();
-  final text = doc.get('body', SharedTypeKind.text);
+  final text = doc.getText('body');
   final builder = DeltaBuilder()
     ..insertText(
       text: 'Hello',

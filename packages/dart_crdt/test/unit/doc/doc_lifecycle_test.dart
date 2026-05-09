@@ -102,11 +102,17 @@ void main() {
       final doc = Doc();
       final root = doc.root;
       final items = doc.get('items', SharedTypeKind.array);
+      final body = doc.getText('body');
+      final fragment = doc.getXmlFragment('xml');
 
       expect(root.kind, SharedTypeKind.map);
       expect(root.name, isEmpty);
       expect(identical(doc.get(), root), isTrue);
       expect(identical(doc.get('items', SharedTypeKind.array), items), isTrue);
+      expect(identical(doc.getArray('items'), items), isTrue);
+      expect(identical(doc.getMap(), root), isTrue);
+      expect(body.kind, SharedTypeKind.text);
+      expect(fragment.kind, SharedTypeKind.xmlFragment);
       expect(
         () => doc.get('items', SharedTypeKind.text),
         throwsA(isA<StateError>()),
@@ -121,6 +127,8 @@ void main() {
       expect(doc.toJson(), {
         '': {'kind': 'map', 'name': ''},
         'items': {'kind': 'array', 'name': 'items'},
+        'body': {'kind': 'text', 'name': 'body'},
+        'xml': {'kind': 'xmlFragment', 'name': 'xml'},
       });
     });
 

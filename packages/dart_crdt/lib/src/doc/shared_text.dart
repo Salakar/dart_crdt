@@ -8,7 +8,7 @@ const _embedReplacement = '\uFFFC';
 ///
 /// ```dart
 /// final doc = Doc();
-/// final body = doc.get('body', SharedTypeKind.text);
+/// final body = doc.getText('body');
 ///
 /// body.insertText(0, 'Hello');
 /// body.format(0, 5, DeltaAttributes.fromJson({'bold': true}));
@@ -42,6 +42,7 @@ extension SharedTypeText on SharedType {
 
   /// Deletes [length] text positions from [index].
   void deleteText(int index, int length) {
+    _syncRootTextFromStoreIfNeeded(this);
     RangeError.checkNotNegative(length, 'length');
     _ensureTextAttributes();
     if (length == 0) {
@@ -54,15 +55,20 @@ extension SharedTypeText on SharedType {
       _sequence.length - length,
       'index',
     );
-    _sequence.removeRange(index, index + length);
-    _textAttributes.removeRange(index, index + length);
-    _bindSequenceChildren();
-    _setSearchMarker(index.clamp(0, _sequence.length - 1));
-    markChanged(index);
+    final document = doc;
+    if (document != null && _rootKeyFor(this) != null) {
+      document.transact((transaction) {
+        _deleteRootTextRange(transaction, this, index, length);
+        _deleteTextValuesLocal(index, length);
+      });
+      return;
+    }
+    _deleteTextValuesLocal(index, length);
   }
 
   /// Applies [attributes] to [length] text positions from [index].
   void format(int index, int length, DeltaAttributes attributes) {
+    _syncRootTextFromStoreIfNeeded(this);
     RangeError.checkNotNegative(length, 'length');
     _ensureTextAttributes();
     if (length == 0 || attributes.isEmpty) {
@@ -126,6 +132,7 @@ extension SharedTypeText on SharedType {
 
   /// Renders this shared text as a delta.
   Delta toDelta() {
+    _syncRootTextFromStoreIfNeeded(this);
     _ensureTextAttributes();
     final builder = DeltaBuilder();
     var index = 0;
@@ -155,6 +162,7 @@ extension SharedTypeText on SharedType {
 
   /// Returns the visible text, using object replacement chars for embeds.
   String toPlainText() {
+    _syncRootTextFromStoreIfNeeded(this);
     return _sequence
         .map((value) => value is String ? value : _embedReplacement)
         .join();
@@ -165,6 +173,7 @@ extension SharedTypeText on SharedType {
     List<Object?> values,
     DeltaAttributes attributes,
   ) {
+    _syncRootTextFromStoreIfNeeded(this);
     RangeError.checkValueInInterval(index, 0, _sequence.length, 'index');
     _ensureTextAttributes();
     for (final value in values) {
@@ -172,6 +181,22 @@ extension SharedTypeText on SharedType {
         _validateSequenceValue(value);
       }
     }
+    final document = doc;
+    if (document != null && _rootKeyFor(this) != null) {
+      document.transact((transaction) {
+        _insertTextValuesLocal(index, values, attributes);
+        _insertRootTextValues(transaction, this, index, values);
+      });
+      return;
+    }
+    _insertTextValuesLocal(index, values, attributes);
+  }
+
+  void _insertTextValuesLocal(
+    int index,
+    List<Object?> values,
+    DeltaAttributes attributes,
+  ) {
     _sequence.insertAll(index, values);
     _textAttributes.insertAll(
       index,
@@ -179,6 +204,14 @@ extension SharedTypeText on SharedType {
     );
     _bindSequenceChildren();
     _setSearchMarker(index);
+    markChanged(index);
+  }
+
+  void _deleteTextValuesLocal(int index, int length) {
+    _sequence.removeRange(index, index + length);
+    _textAttributes.removeRange(index, index + length);
+    _bindSequenceChildren();
+    _setSearchMarker(index.clamp(0, _sequence.length - 1));
     markChanged(index);
   }
 

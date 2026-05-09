@@ -33,7 +33,7 @@ typedef UndoDeleteFilter = bool Function(Item item);
 ///
 /// ```dart
 /// final doc = Doc();
-/// final body = doc.get('body', SharedTypeKind.text);
+/// final body = doc.getText('body');
 /// final undo = UndoManager(body);
 ///
 /// body.insertText(0, 'draft');

@@ -94,6 +94,16 @@ final class EventHandler<TEvent> {
     return subscription;
   }
 
+  /// Registers [listener] for only the next event.
+  EventSubscription once(EventListener<TEvent> listener) {
+    late final EventSubscription subscription;
+    subscription = add((event) {
+      subscription.cancel();
+      listener(event);
+    });
+    return subscription;
+  }
+
   /// Removes the first active registration that uses [listener].
   bool remove(EventListener<TEvent> listener) {
     for (var index = 0; index < _listeners.length; index += 1) {

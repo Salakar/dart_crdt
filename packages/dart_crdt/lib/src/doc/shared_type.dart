@@ -70,10 +70,14 @@ final class SharedType extends SharedTypePlaceholder
   bool get isRoot => _doc != null && _parent == null;
 
   @override
-  int get length => _sequence.length;
+  int get length {
+    _syncRootTextFromStoreIfNeeded(this);
+    return _sequence.length;
+  }
 
   @override
   Iterator<Object?> get iterator {
+    _syncRootTextFromStoreIfNeeded(this);
     return List<Object?>.unmodifiable(_sequence).iterator;
   }
 
@@ -123,6 +127,7 @@ final class SharedType extends SharedTypePlaceholder
 
   @override
   SharedType copy() {
+    _syncRootTextFromStoreIfNeeded(this);
     final clone = SharedType(kind: kind, name: name);
     _copyAttributesInto(this, clone);
     _copySequenceInto(this, clone);

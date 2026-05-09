@@ -7,7 +7,7 @@
 /// import 'package:dart_crdt/dart_crdt.dart';
 ///
 /// final doc = Doc();
-/// final text = doc.get('body', SharedTypeKind.text);
+/// final text = doc.getText('body');
 ///
 /// doc.transact((transaction) {
 ///   text.insertText(0, 'Hello');
@@ -21,12 +21,12 @@
 ///
 /// ```dart
 /// final left = Doc();
-/// left.get('body', SharedTypeKind.text).insertText(0, 'sync');
+/// left.getText('body').insertText(0, 'sync');
 ///
 /// final right = Doc();
 /// applyUpdate(right, encodeStateAsUpdate(left));
 ///
-/// assert(right.get('body', SharedTypeKind.text).toPlainText() == 'sync');
+/// assert(right.getText('body').toPlainText() == 'sync');
 /// ```
 ///
 /// Use `UndoManager` for scoped undo/redo and `RelativePosition` helpers for
@@ -34,7 +34,7 @@
 ///
 /// ```dart
 /// final doc = Doc();
-/// final body = doc.get('body', SharedTypeKind.text);
+/// final body = doc.getText('body');
 /// final undo = UndoManager(body);
 /// body.insertText(0, 'draft');
 /// undo.undo();
@@ -55,6 +55,7 @@ library;
 
 export 'src/attribution/attribution_manager.dart';
 export 'src/attribution/diff_snapshot_attribution.dart';
+export 'src/awareness/awareness.dart';
 export 'src/binary/any_value.dart';
 export 'src/content/content.dart';
 export 'src/delta/delta_operation.dart';

@@ -4,8 +4,8 @@ import 'package:dart_crdt/dart_crdt.dart';
 
 void main() {
   final doc = Doc(guid: 'example-basic', clientId: ClientId(1));
-  final text = doc.get('body', SharedTypeKind.text);
-  final items = doc.get('items', SharedTypeKind.array);
+  final text = doc.getText('body');
+  final items = doc.getArray('items');
   final settings = doc.get('settings');
 
   text.insertText(0, 'Hello, local-first Dart.');

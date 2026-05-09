@@ -16,6 +16,12 @@ extension SharedTypeXml on SharedType {
     insertText(length, text);
   }
 
+  /// Inserts XML [content] after [reference], or at the beginning if `null`.
+  void insertXmlAfter(SharedType? reference, Iterable<SharedType> content) {
+    final index = reference == null ? 0 : _xmlChildIndex(reference) + 1;
+    insertAll(index, content);
+  }
+
   /// Direct XML child elements in sequence order.
   Iterable<SharedType> get xmlChildren {
     return List<SharedType>.unmodifiable(_sequence.whereType<SharedType>());
@@ -93,6 +99,14 @@ extension SharedTypeXml on SharedType {
       cursor += direction;
     }
     return null;
+  }
+
+  int _xmlChildIndex(SharedType reference) {
+    final index = _sequence.indexWhere((value) => identical(value, reference));
+    if (index < 0) {
+      throw StateError('Reference XML child is not contained by this type.');
+    }
+    return index;
   }
 }
 

@@ -15,20 +15,8 @@ void main() {
 
 Doc _docWithRootText(String text) {
   final doc = Doc(gc: false, clientId: ClientId(1));
-  doc.store.add(
-    Item(
-      id: Id(client: ClientId(1), clock: Clock(0)),
-      parent: doc.itemParentForKey('root'),
-      content: ContentString(text),
-    ),
-  );
+  doc.getText('root').insertText(0, text);
   return doc;
 }
 
-String _rootText(Doc doc) {
-  return [
-    for (final item in doc.itemParentForKey('root').items())
-      if (!item.deleted && item.content is ContentString)
-        (item.content as ContentString).value,
-  ].join();
-}
+String _rootText(Doc doc) => doc.getText('root').toPlainText();

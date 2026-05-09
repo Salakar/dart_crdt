@@ -22,7 +22,7 @@ import 'package:dart_crdt/dart_crdt.dart';
 
 void main() {
   final doc = Doc();
-  final text = doc.get('body', SharedTypeKind.text);
+  final text = doc.getText('body');
 
   text.insertText(0, 'Hello, local-first Dart.');
 
@@ -35,6 +35,7 @@ void main() {
 | Area | Support |
 | --- | --- |
 | Documents | Client IDs, transactions, roots, observers, lifecycle events, and subdocuments. |
+| Presence | Awareness state, local presence fields, update exchange, and offline removals. |
 | Shared types | Arrays, maps, text, XML-like trees, nested types, embeds, and attributes. |
 | Sync | Deterministic V1/V2 updates, state vectors, merge/diff helpers, and update application. |
 | Editing | Rich-text deltas, snapshots, relative positions, undo/redo, and attribution metadata. |

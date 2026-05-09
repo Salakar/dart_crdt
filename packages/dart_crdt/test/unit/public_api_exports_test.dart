@@ -14,6 +14,7 @@ void main() {
     expect(StackItem().isEmpty, isTrue);
     expect(noAttributionManager, isA<AttributionManager>());
     expect(Attributions.empty().isEmpty, isTrue);
+    expect(Awareness(localClientId: ClientId(1)), isA<Awareness>());
     expect(
       createAttributionManagerFromSnapshots(emptySnapshot),
       isA<SnapshotAttributionManager>(),
