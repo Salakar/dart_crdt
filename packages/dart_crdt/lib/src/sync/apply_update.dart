@@ -173,9 +173,13 @@ bool _readDecodedUpdate(
   _requireRestDone(decoder);
 
   if (missing.isNotEmpty) {
+    // Append rather than overwrite: a second causally-incomplete update must
+    // not discard an earlier one's struct bytes, or those structs are lost
+    // forever once their dependencies arrive. Out-of-order delivery is normal
+    // on real networks, so multiple updates can be pending simultaneously.
     transaction.doc.store
       ..addPendingStructs(blocks)
-      ..setPendingStructUpdate(
+      ..addPendingStructUpdate(
         PendingStructs(
           missing: missing,
           update: updateBytes,

@@ -140,23 +140,32 @@ bool _applyDeleteSet(
 }
 
 void _retryPendingStructs(Transaction transaction) {
-  final pending = transaction.doc.store.pendingStructUpdate;
-  if (pending == null || pending.update.isEmpty) {
-    return;
-  }
-  for (final entry in pending.missing.entries) {
-    if (transaction.doc.store.getClock(entry.key).value < entry.value.value) {
-      return;
+  final store = transaction.doc.store;
+  // Re-apply every pending update to a fixpoint. Each pass removes the updates
+  // whose dependencies have now arrived (they integrate fully and are not
+  // re-pended); the rest re-pend themselves via `_readDecodedUpdate`. Because
+  // an update can depend on another that is also pending, integrating one may
+  // unblock the next, so loop until a pass makes no progress. Termination is
+  // guaranteed: the pending count strictly decreases each iteration or we stop.
+  var pendingCount = store.pendingStructUpdates.length;
+  while (pendingCount > 0) {
+    for (final entry in store.takePendingStructUpdates()) {
+      if (entry.update.isEmpty) {
+        continue;
+      }
+      _readDecodedUpdate(
+        _decoderFor(entry.update, entry.version),
+        transaction,
+        updateBytes: entry.update,
+        version: entry.version,
+      );
     }
+    final remaining = store.pendingStructUpdates.length;
+    if (remaining >= pendingCount) {
+      break;
+    }
+    pendingCount = remaining;
   }
-
-  transaction.doc.store.clearPendingStructs();
-  _readDecodedUpdate(
-    _decoderFor(pending.update, pending.version),
-    transaction,
-    updateBytes: pending.update,
-    version: pending.version,
-  );
 }
 
 void _retryPendingDeleteSet(Transaction transaction) {

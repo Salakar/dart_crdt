@@ -38,7 +38,7 @@ final class StructStore implements StructIntegrationTarget, ItemLookup {
   final IdSet _skips = IdSet();
   final IdSet _inserted = IdSet();
   final IdSet _deleted = IdSet();
-  PendingStructs? _pendingStructUpdate;
+  final List<PendingStructs> _pendingStructUpdates = <PendingStructs>[];
 
   /// Clients with stored structs in ascending order.
   List<ClientId> get clients => List<ClientId>.unmodifiable(
@@ -69,8 +69,14 @@ final class StructStore implements StructIntegrationTarget, ItemLookup {
   /// Pending delete ranges waiting for missing structs.
   IdSet get pendingDeleteSet => _copyIdSet(_pendingDeleteSet);
 
-  /// Raw pending struct update metadata.
-  PendingStructs? get pendingStructUpdate => _pendingStructUpdate;
+  /// The most recently recorded pending struct update, or `null` when none are
+  /// pending.
+  PendingStructs? get pendingStructUpdate =>
+      _pendingStructUpdates.isEmpty ? null : _pendingStructUpdates.last;
+
+  /// All causally-incomplete struct updates awaiting missing dependencies.
+  List<PendingStructs> get pendingStructUpdates =>
+      List<PendingStructs>.unmodifiable(_pendingStructUpdates);
 
   /// Returns stored structs for [client] in ascending clock order.
   List<AbstractStruct> structsFor(ClientId client) {
@@ -175,15 +181,33 @@ final class StructStore implements StructIntegrationTarget, ItemLookup {
     pending.insertInto(_pendingStructs);
   }
 
-  /// Replaces raw pending struct update metadata.
+  /// Appends a causally-incomplete struct update awaiting dependencies.
+  void addPendingStructUpdate(PendingStructs pending) {
+    _pendingStructUpdates.add(pending);
+  }
+
+  /// Replaces all pending struct update metadata with [pending] (or clears it
+  /// when `null`).
   void setPendingStructUpdate(PendingStructs? pending) {
-    _pendingStructUpdate = pending;
+    _pendingStructUpdates.clear();
+    if (pending != null) {
+      _pendingStructUpdates.add(pending);
+    }
+  }
+
+  /// Removes and returns the pending struct updates, also clearing the pending
+  /// block ranges so a retry pass can rebuild them from whatever stays pending.
+  List<PendingStructs> takePendingStructUpdates() {
+    final taken = List<PendingStructs>.of(_pendingStructUpdates);
+    _pendingStructUpdates.clear();
+    _pendingStructs = BlockSet();
+    return taken;
   }
 
   /// Clears pending struct ranges and raw update metadata.
   void clearPendingStructs() {
     _pendingStructs = BlockSet();
-    _pendingStructUpdate = null;
+    _pendingStructUpdates.clear();
   }
 
   /// Adds pending delete ranges.

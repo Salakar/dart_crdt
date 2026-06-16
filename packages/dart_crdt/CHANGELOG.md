@@ -1,5 +1,66 @@
 # Changelog
 
+## 0.2.1
+
+Bug-fix release: web compilation, full-clear crashes, and out-of-order sync
+data loss.
+
+### API Changes
+
+- No public API changes. `StructStore` now retains multiple pending struct
+  updates internally (`pendingStructUpdates`) instead of a single slot; the
+  existing `pendingStructUpdate` getter is preserved and returns the most
+  recent pending update.
+
+### Fixes
+
+- Fixed web (`dart2js`/`dart compile js`) compilation: the content-attribute
+  digest no longer uses 64-bit integer literals (`0xffffffffffffffff`,
+  `0xcbf29ce484222325`) that cannot be represented exactly in JavaScript. The
+  FNV-1a hash is now computed across two 32-bit lanes using only arithmetic
+  that is exact on every Dart platform, producing the same 16-hex digest on the
+  VM and the web.
+- Fixed an `ArgumentError` crash when a single transaction empties a text type
+  or array entirely (e.g. select-all then delete). `deleteText`/`delete` no
+  longer pre-clamp the search-marker index with `clamp(0, length - 1)`, which
+  threw `clamp(0, -1)` once the last item was removed.
+- Fixed silent data loss on out-of-order update delivery. When two (or more)
+  causally-incomplete updates arrived before their dependencies, the second
+  overwrote the first's pending struct bytes, so the first update's content was
+  lost forever once dependencies arrived. Pending updates are now retained as a
+  list and retried to a fixpoint, so every update converges regardless of
+  arrival order.
+
+### Compatibility Summary
+
+- Wire format, state vectors, and update encoding are unchanged and remain
+  byte-compatible with 0.2.0. The pending-update fix only affects in-memory
+  handling of causally-incomplete updates and changes no serialized bytes.
+- The content-attribute `stableHash` digest value changed (it is now web-safe).
+  The digest is in-memory only — never serialized or exchanged — so this does
+  not affect cross-document sync or persisted data.
+
+### Benchmark Summary
+
+- No benchmark-relevant changes; hot paths (encode/decode, integration) are
+  untouched. The pending-update retry now loops to a fixpoint but only over the
+  set of causally-incomplete updates, which is empty on the common in-order
+  path.
+
+### Known Limitations
+
+- Relative positions anchored to a nested (non-root) shared type via a type id
+  still resolve against a detached placeholder; nested-type anchors are not yet
+  fully supported (root- and item-anchored positions are unaffected).
+
+### Verification
+
+- `melos run format`
+- `melos run analyze`
+- `melos run test`
+- `melos run js:smoke`
+- `dart pub publish --dry-run`
+
 ## 0.2.0
 
 Adds the first production-oriented sync path for high-level shared text edits

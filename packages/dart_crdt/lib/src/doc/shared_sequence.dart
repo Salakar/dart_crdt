@@ -98,7 +98,9 @@ extension SharedTypeSequence on SharedType {
     );
     _sequence.removeRange(index, index + length);
     _bindSequenceChildren();
-    _setSearchMarker(index.clamp(0, _sequence.length - 1));
+    // _setSearchMarker clamps and guards against an empty sequence itself;
+    // pre-clamping here threw `clamp(0, -1)` when the delete emptied the type.
+    _setSearchMarker(index);
     markChanged(index);
   }
 

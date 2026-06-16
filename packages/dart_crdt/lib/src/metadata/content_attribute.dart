@@ -143,12 +143,46 @@ String _stringKey(String value) {
   return base64UrlEncode(utf8.encode(value));
 }
 
+/// Computes a deterministic 64-bit FNV-1a-style digest as 16 lowercase hex
+/// digits.
+///
+/// The classic 64-bit algorithm relies on integer constants and products that
+/// exceed 2^53, which dart2js cannot represent exactly (and which fail to even
+/// compile as literals). This implementation keeps all arithmetic within two
+/// independent 32-bit lanes using only `%`, `~/`, `*` and 16-bit `^`, every
+/// one of which is exact on both the Dart VM and the web. The digest is
+/// therefore identical across every platform.
 String _fnv64Hex(String value) {
-  const mask = 0xffffffffffffffff;
-  var hash = 0xcbf29ce484222325;
-  for (final byte in Uint8List.fromList(utf8.encode(value))) {
-    hash ^= byte;
-    hash = (hash * 0x100000001b3) & mask;
-  }
-  return hash.toRadixString(16).padLeft(16, '0');
+  final bytes = Uint8List.fromList(utf8.encode(value));
+  // Two FNV-1a lanes with distinct seeds/primes form the high and low words.
+  final hi = _fnv32(bytes, 0x811c9dc5, 16777619);
+  final lo = _fnv32(bytes, 0x01000193, 16777639);
+  return _hex32(hi) + _hex32(lo);
 }
+
+int _fnv32(Uint8List bytes, int seed, int prime) {
+  var hash = seed;
+  for (final byte in bytes) {
+    hash = _mul32(_xor32(hash, byte), prime);
+  }
+  return hash;
+}
+
+/// Multiplies two unsigned 32-bit integers, returning the low 32 bits. Every
+/// intermediate product stays below 2^53 so the result is exact everywhere.
+int _mul32(int a, int b) {
+  final aLow = a % 0x10000;
+  final aHigh = a ~/ 0x10000;
+  return (aLow * b + (aHigh * b % 0x10000) * 0x10000) % 0x100000000;
+}
+
+/// XORs two unsigned 32-bit integers without relying on platform-dependent
+/// 32-bit bitwise semantics: each `^` operates on 16-bit (always-positive)
+/// halves, so the result matches on the VM and the web.
+int _xor32(int a, int b) {
+  final low = (a % 0x10000) ^ (b % 0x10000);
+  final high = (a ~/ 0x10000) ^ (b ~/ 0x10000);
+  return high * 0x10000 + low;
+}
+
+String _hex32(int value) => value.toRadixString(16).padLeft(8, '0');
