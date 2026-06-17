@@ -188,7 +188,7 @@ final class Transaction {
 
     try {
       captureError(() => doc._beforeObserverCalls.emit(this));
-      _emitSharedTypeEvents(captureError);
+      _emitSharedTypeEvents(this, captureError);
       captureError(() => doc._afterTransaction.emit(this));
       captureError(() => _cleanupStructs(this));
       for (final callback in _cleanupCallbacks) {
@@ -202,20 +202,6 @@ final class Transaction {
     }
     if (error != null) {
       Error.throwWithStackTrace(error!, stackTrace!);
-    }
-  }
-
-  void _emitSharedTypeEvents(void Function(void Function()) captureError) {
-    for (final entry in _changed.entries) {
-      final target = entry.key;
-      if (target is SharedType) {
-        final event = SharedTypeEvent(
-          target: target,
-          keys: entry.value,
-          transaction: this,
-        );
-        captureError(() => target._emitEvent(event));
-      }
     }
   }
 }

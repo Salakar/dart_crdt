@@ -114,11 +114,22 @@ void _writeItemPayload(
     if (parent == null) {
       throw StateError('Cannot write item without a parent reference.');
     }
-    _writeParentInfo(encoder, true);
-    _writeString(encoder, parent.key);
-    if (item.parentSub != null) {
-      _writeString(encoder, item.parentSub!);
+    final definingId = parent.definingItemId;
+    if (definingId == null) {
+      _writeParentInfo(encoder, true);
+      _writeString(encoder, parent.key);
+    } else {
+      // Nested type: reference the defining ContentType item id.
+      _writeParentInfo(encoder, false);
+      _writeLeftId(encoder, definingId);
     }
+  }
+  // The parentSub (map key) is written whenever the 0x20 bit is set — outside
+  // the root-parent block — matching the decoder. Items that supersede
+  // a map value carry an origin, so writing it only in the no-origin branch
+  // (as before) silently dropped the key for every overwrite.
+  if (item.parentSub != null) {
+    _writeString(encoder, item.parentSub!);
   }
   _writeContentPayload(
     encoder,

@@ -59,6 +59,7 @@ extension SharedTypeSequence on SharedType {
 
   /// Inserts [values] at [index].
   void insertAll(int index, Iterable<Object?> values) {
+    _syncSharedTypeView(this);
     RangeError.checkValueInInterval(index, 0, _sequence.length, 'index');
     final inserted = List<Object?>.of(values);
     if (inserted.isEmpty) {
@@ -67,14 +68,20 @@ extension SharedTypeSequence on SharedType {
     for (final value in inserted) {
       _validateSequenceValue(value);
     }
-    _sequence.insertAll(index, inserted);
-    _bindSequenceChildren();
-    _setSearchMarker(index);
-    markChanged(index);
+    final document = doc;
+    if (document != null && _storeParentFor(this) != null) {
+      document.transact((transaction) {
+        _insertSequenceValuesLocal(index, inserted);
+        _insertRootSequenceValues(transaction, this, index, inserted);
+      });
+      return;
+    }
+    _insertSequenceValuesLocal(index, inserted);
   }
 
   /// Appends [value] to the end of the sequence.
   void push(Object? value) {
+    _syncSharedTypeView(this);
     insert(_sequence.length, value);
   }
 
@@ -85,6 +92,7 @@ extension SharedTypeSequence on SharedType {
 
   /// Deletes [length] values starting at [index].
   void delete(int index, [int length = 1]) {
+    _syncSharedTypeView(this);
     RangeError.checkNotNegative(length, 'length');
     if (length == 0) {
       RangeError.checkValueInInterval(index, 0, _sequence.length, 'index');
@@ -96,16 +104,20 @@ extension SharedTypeSequence on SharedType {
       _sequence.length - length,
       'index',
     );
-    _sequence.removeRange(index, index + length);
-    _bindSequenceChildren();
-    // _setSearchMarker clamps and guards against an empty sequence itself;
-    // pre-clamping here threw `clamp(0, -1)` when the delete emptied the type.
-    _setSearchMarker(index);
-    markChanged(index);
+    final document = doc;
+    if (document != null && _storeParentFor(this) != null) {
+      document.transact((transaction) {
+        _deleteRootSequenceRange(transaction, this, index, length);
+        _deleteSequenceValuesLocal(index, length);
+      });
+      return;
+    }
+    _deleteSequenceValuesLocal(index, length);
   }
 
   /// Returns the value at [index].
   Object? get(int index) {
+    _syncSharedTypeView(this);
     RangeError.checkValueInInterval(index, 0, _sequence.length - 1, 'index');
     _setSearchMarker(index);
     return _sequence[index];
@@ -113,6 +125,7 @@ extension SharedTypeSequence on SharedType {
 
   /// Returns a defensive slice from [start] to [end].
   List<Object?> slice([int start = 0, int? end]) {
+    _syncSharedTypeView(this);
     final normalizedEnd = end ?? _sequence.length;
     RangeError.checkValueInInterval(start, 0, _sequence.length, 'start');
     RangeError.checkValueInInterval(
@@ -126,7 +139,24 @@ extension SharedTypeSequence on SharedType {
 
   /// Returns all sequence values as a defensive list.
   List<Object?> toArray() {
+    _syncSharedTypeView(this);
     return List<Object?>.unmodifiable(_sequence);
+  }
+
+  void _insertSequenceValuesLocal(int index, List<Object?> inserted) {
+    _sequence.insertAll(index, inserted);
+    _bindSequenceChildren();
+    _setSearchMarker(index);
+    markChanged(index);
+  }
+
+  void _deleteSequenceValuesLocal(int index, int length) {
+    _sequence.removeRange(index, index + length);
+    _bindSequenceChildren();
+    // _setSearchMarker clamps and guards against an empty sequence itself;
+    // pre-clamping here threw `clamp(0, -1)` when the delete emptied the type.
+    _setSearchMarker(index);
+    markChanged(index);
   }
 
   void _bindSequenceChildren() {

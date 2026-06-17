@@ -23,8 +23,11 @@ part 'doc_events.dart';
 part 'doc_gc.dart';
 part 'doc_formatting.dart';
 part 'doc_root_helpers.dart';
+part 'doc_store_access.dart';
 part 'shared_map.dart';
+part 'shared_map_store.dart';
 part 'shared_sequence.dart';
+part 'shared_sequence_store.dart';
 part 'shared_text.dart';
 part 'shared_text_store_mutation.dart';
 part 'shared_text_store_sync.dart';
@@ -89,6 +92,8 @@ final class Doc {
 
   final Map<String, SharedType> _share = <String, SharedType>{};
   final Map<String, ItemParent> _itemParentsByKey = <String, ItemParent>{};
+  final Map<Id, ItemParent> _itemParentsByItemId = <Id, ItemParent>{};
+  final Map<Id, SharedType> _sharedTypeByItemId = <Id, SharedType>{};
   final Set<Subdocument> _subdocs = LinkedHashSet<Subdocument>.identity();
   final Completer<void> _loadedCompleter = Completer<void>();
   final Completer<void> _syncedCompleter = Completer<void>();

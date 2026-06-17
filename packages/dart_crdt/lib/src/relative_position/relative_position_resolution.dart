@@ -25,18 +25,29 @@ RelativePosition createRelativePositionFromTypeIndex(
 }) {
   RangeError.checkNotNegative(index, 'index');
   _checkAssoc(assoc);
-  final rootName = _rootNameFor(type);
-  if (rootName == null) {
-    throw UnsupportedError('Only integrated root shared types are supported.');
+  final doc = type.doc;
+  final parent = doc?.storeParentForType(type);
+  if (doc == null || parent == null) {
+    throw UnsupportedError(
+      'Only integrated shared types support relative positions.',
+    );
   }
-  final parent = type.doc!.itemParentForKey(rootName);
+  // A nested type anchors end-of-type positions to its defining item id; a root
+  // type uses its root name.
+  final typeId = parent.definingItemId;
+  final rootName = typeId == null ? _rootNameFor(type) : null;
+  if (rootName == null && typeId == null) {
+    throw UnsupportedError(
+      'Only integrated shared types support relative positions.',
+    );
+  }
   final totalLength = _parentLength(parent, contentLength);
   RangeError.checkValueInInterval(index, 0, totalLength, 'index');
 
   var remaining = index;
   if (assoc < 0) {
     if (remaining == 0) {
-      return RelativePosition(rootName: rootName, assoc: assoc);
+      return RelativePosition(rootName: rootName, typeId: typeId, assoc: assoc);
     }
     remaining -= 1;
   }
@@ -46,6 +57,7 @@ RelativePosition createRelativePositionFromTypeIndex(
     if (length > remaining) {
       return RelativePosition(
         rootName: rootName,
+        typeId: typeId,
         itemId: item.id.advance(remaining),
         assoc: assoc,
       );
@@ -54,12 +66,13 @@ RelativePosition createRelativePositionFromTypeIndex(
     if (item.right == null && assoc < 0) {
       return RelativePosition(
         rootName: rootName,
+        typeId: typeId,
         itemId: item.lastId,
         assoc: assoc,
       );
     }
   }
-  return RelativePosition(rootName: rootName, assoc: assoc);
+  return RelativePosition(rootName: rootName, typeId: typeId, assoc: assoc);
 }
 
 /// Resolves [position] in [doc], or returns `null` while required content is missing.
@@ -155,8 +168,9 @@ AbsolutePosition? _absoluteFromTypeId(
   if (item == null || item.deleted || item.content is! ContentType) {
     return null;
   }
-  final placeholder = (item.content as ContentType).sharedType;
-  final type = SharedType(kind: placeholder.kind, name: placeholder.name);
+  // Resolve to the live, store-backed nested type so the index reflects its
+  // real content and the result is usable for cursor mapping.
+  final type = doc.liveNestedTypeForItem(item);
   final index = position.assoc >= 0 ? type.length : 0;
   return AbsolutePosition(type: type, index: index, assoc: position.assoc);
 }
@@ -184,6 +198,17 @@ FollowRedoneResult? _resolveItem(
 }
 
 SharedType _typeForParent(Doc doc, ItemParent parent) {
+  final definingId = parent.definingItemId;
+  if (definingId != null) {
+    final existing = doc.sharedTypeForItemId(definingId);
+    if (existing != null) {
+      return existing;
+    }
+    final definingItem = doc.store.itemContaining(definingId);
+    if (definingItem != null && definingItem.content is ContentType) {
+      return doc.liveNestedTypeForItem(definingItem);
+    }
+  }
   return _typeForRootName(doc, parent.key);
 }
 

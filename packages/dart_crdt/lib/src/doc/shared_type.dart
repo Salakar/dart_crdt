@@ -54,6 +54,10 @@ final class SharedType extends SharedTypePlaceholder
   SharedType? _parent;
   Object? _parentKey;
 
+  /// Store parent for a nested (non-root) store-backed type, keyed by the id of
+  /// its defining `ContentType` item. `null` for roots and detached types.
+  ItemParent? _nestedParent;
+
   /// Document this type is integrated into, or `null` while detached.
   Doc? get doc => _doc;
 
@@ -71,13 +75,13 @@ final class SharedType extends SharedTypePlaceholder
 
   @override
   int get length {
-    _syncRootTextFromStoreIfNeeded(this);
+    _syncSharedTypeView(this);
     return _sequence.length;
   }
 
   @override
   Iterator<Object?> get iterator {
-    _syncRootTextFromStoreIfNeeded(this);
+    _syncSharedTypeView(this);
     return List<Object?>.unmodifiable(_sequence).iterator;
   }
 
@@ -127,7 +131,7 @@ final class SharedType extends SharedTypePlaceholder
 
   @override
   SharedType copy() {
-    _syncRootTextFromStoreIfNeeded(this);
+    _syncSharedTypeView(this);
     final clone = SharedType(kind: kind, name: name);
     _copyAttributesInto(this, clone);
     _copySequenceInto(this, clone);
@@ -188,6 +192,12 @@ final class SharedType extends SharedTypePlaceholder
     for (final child in _children.values) {
       child._bindDoc(doc);
     }
+  }
+
+  /// Binds this type to [doc] and its store [parent] (a nested type's parent).
+  void _bindNestedParent(Doc doc, ItemParent parent) {
+    _bindDoc(doc);
+    _nestedParent = parent;
   }
 
   bool _hasAncestor(SharedType type) {
