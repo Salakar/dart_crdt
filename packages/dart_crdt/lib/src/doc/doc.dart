@@ -91,6 +91,8 @@ final class Doc {
 
   final Map<String, SharedType> _share = <String, SharedType>{};
   final Map<String, ItemParent> _itemParentsByKey = <String, ItemParent>{};
+  final Map<Id, ItemParent> _itemParentsByItemId = <Id, ItemParent>{};
+  final Map<Id, SharedType> _sharedTypeByItemId = <Id, SharedType>{};
   final Set<Subdocument> _subdocs = LinkedHashSet<Subdocument>.identity();
   final Completer<void> _loadedCompleter = Completer<void>();
   final Completer<void> _syncedCompleter = Completer<void>();
@@ -273,6 +275,24 @@ final class Doc {
       throw ArgumentError.value(key, 'key', 'must not be empty');
     }
     return _itemParentsByKey.putIfAbsent(key, () => ItemParent(key: key));
+  }
+
+  /// Returns the item parent for the nested type defined by [id], creating it
+  /// lazily so child items can resolve their parent before the defining
+  /// `ContentType` item has been integrated.
+  ItemParent itemParentForItemId(Id id) {
+    return _itemParentsByItemId.putIfAbsent(
+      id,
+      () => ItemParent(key: '', definingItemId: id),
+    );
+  }
+
+  /// Live nested shared type bound to the `ContentType` item [id], or `null`.
+  SharedType? sharedTypeForItemId(Id id) => _sharedTypeByItemId[id];
+
+  /// Registers the live nested shared type [type] for `ContentType` item [id].
+  void registerSharedTypeForItemId(Id id, SharedType type) {
+    _sharedTypeByItemId[id] = type;
   }
 
   /// Returns the tracked subdocument guids.

@@ -28,11 +28,17 @@ final class ItemParent {
   /// Creates parent state for a root or nested shared type.
   ItemParent({
     required this.key,
+    this.definingItemId,
     bool isDeleted = false,
   }) : _isDeleted = isDeleted;
 
-  /// Stable parent key used by placeholder binary writing.
+  /// Stable parent key used by root placeholder binary writing.
   final String key;
+
+  /// Id of the `ContentType` item that defines this nested type, or `null` for
+  /// a root parent. When set, items are encoded with a parent-id reference
+  /// instead of a root-name string.
+  final Id? definingItemId;
 
   Item? _start;
   final Map<String, Item> _currentBySubKey = <String, Item>{};

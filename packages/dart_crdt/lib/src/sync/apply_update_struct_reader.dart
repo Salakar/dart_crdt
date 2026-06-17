@@ -26,15 +26,12 @@ Item _readItem(
   String? parentSub;
 
   if (origin == null && rightOrigin == null) {
-    final isRootKey = _readParentInfo(decoder);
-    if (!isRootKey) {
-      _readLeftId(decoder);
-      throw MalformedUpdateException(
-        offset: infoOffset,
-        reason: 'parent id references are not supported yet',
-      );
+    if (_readParentInfo(decoder)) {
+      parent = document.itemParentForKey(_readString(decoder));
+    } else {
+      // Nested type: the parent is the type defined by this item id.
+      parent = document.itemParentForItemId(_readLeftId(decoder));
     }
-    parent = document.itemParentForKey(_readString(decoder));
   }
   if (hasParentSub) {
     parentSub = _readString(decoder);

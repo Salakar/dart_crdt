@@ -114,8 +114,15 @@ void _writeItemPayload(
     if (parent == null) {
       throw StateError('Cannot write item without a parent reference.');
     }
-    _writeParentInfo(encoder, true);
-    _writeString(encoder, parent.key);
+    final definingId = parent.definingItemId;
+    if (definingId == null) {
+      _writeParentInfo(encoder, true);
+      _writeString(encoder, parent.key);
+    } else {
+      // Nested type: reference the defining ContentType item id (Yjs format).
+      _writeParentInfo(encoder, false);
+      _writeLeftId(encoder, definingId);
+    }
   }
   // The parentSub (map key) is written whenever the 0x20 bit is set — outside
   // the root-parent block — matching the decoder and Yjs. Items that supersede

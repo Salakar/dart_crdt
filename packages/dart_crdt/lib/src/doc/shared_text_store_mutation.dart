@@ -36,6 +36,9 @@ void _insertRootTextValues(
       content: run.content,
     );
     item.integrate(target);
+    if (item.content is ContentType) {
+      _integrateNestedValue(transaction, item);
+    }
     insertionIndex += run.textLength;
   }
 }

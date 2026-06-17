@@ -24,7 +24,7 @@ void _syncMapFromStoreIfNeeded(SharedType type) {
     if (item == null || item.deleted) {
       continue;
     }
-    next[key] = _mapItemValue(item);
+    next[key] = _mapItemValue(type.doc!, item);
   }
 
   // Detach children and drop entries for keys that are gone.
@@ -50,11 +50,10 @@ void _syncMapFromStoreIfNeeded(SharedType type) {
 }
 
 /// The visible value carried by a map attribute [item].
-Object? _mapItemValue(Item item) {
+Object? _mapItemValue(Doc doc, Item item) {
   final content = item.content;
   if (content is ContentType) {
-    // M3: nested values surface as their placeholder; M6 binds the live type.
-    return content.sharedType;
+    return _liveNestedType(doc, item);
   }
   final values = content.content;
   return values.isEmpty ? null : values.first;
@@ -91,6 +90,9 @@ void _setRootMapAttr(
         : ContentAny.fromObjects(<Object?>[value]),
   );
   item.integrate(target);
+  if (item.content is ContentType) {
+    _integrateNestedValue(transaction, item);
+  }
 }
 
 /// Deletes a store-backed map attribute by tombstoning its current item.

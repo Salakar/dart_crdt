@@ -8,7 +8,7 @@ void _syncRootTextFromStoreIfNeeded(SharedType type) {
   if (parent == null) {
     return;
   }
-  final values = _rootTextValues(parent);
+  final values = _rootTextValues(type.doc!, parent);
   if (_sameTextValues(type._sequence, values)) {
     return;
   }
@@ -45,6 +45,10 @@ String? _rootKeyFor(SharedType type) {
 /// in-memory model. Today it resolves only root types via [_rootKeyFor]; later
 /// milestones extend it to nested types (addressed by their defining item id).
 ItemParent? _storeParentFor(SharedType type) {
+  final nested = type._nestedParent;
+  if (nested != null) {
+    return nested;
+  }
   final rootKey = _rootKeyFor(type);
   if (rootKey == null) {
     return null;
@@ -52,7 +56,7 @@ ItemParent? _storeParentFor(SharedType type) {
   return type.doc!.itemParentForKey(rootKey);
 }
 
-List<Object?> _rootTextValues(ItemParent parent) {
+List<Object?> _rootTextValues(Doc doc, ItemParent parent) {
   final values = <Object?>[];
   for (final item in parent.items()) {
     if (item.deleted || !item.countable) {
@@ -61,8 +65,8 @@ List<Object?> _rootTextValues(ItemParent parent) {
     switch (item.content) {
       case ContentString(:final value):
         values.addAll(_unicodeScalars(value));
-      case ContentType(:final sharedType):
-        values.add(sharedType);
+      case ContentType():
+        values.add(_liveNestedType(doc, item));
       case final content:
         values.addAll(content.content);
     }
