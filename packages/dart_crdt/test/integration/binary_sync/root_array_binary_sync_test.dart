@@ -26,7 +26,10 @@ void main() {
     test('deletes propagate over the wire', () {
       final harness = BinarySyncHarness(replicaCount: 2, snapshot: snap);
 
-      harness.mutate(0, (doc) => doc.getArray('a').insertAll(0, ['a', 'b', 'c', 'd']));
+      harness.mutate(
+        0,
+        (doc) => doc.getArray('a').insertAll(0, ['a', 'b', 'c', 'd']),
+      );
       harness.flush();
       expect(array(harness.replicaAt(1)), ['a', 'b', 'c', 'd']);
 
@@ -38,7 +41,8 @@ void main() {
     });
 
     test('concurrent inserts across a partition converge after reconcile', () {
-      final harness = BinarySyncHarness(replicaCount: 3, snapshot: snap, seed: 5);
+      final harness =
+          BinarySyncHarness(replicaCount: 3, snapshot: snap, seed: 5);
 
       harness.mutate(0, (doc) => doc.getArray('a').insertAll(0, ['base']));
       harness.flush();
@@ -59,7 +63,8 @@ void main() {
     });
 
     test('a replica that missed all traffic catches up via reconcile', () {
-      final harness = BinarySyncHarness(replicaCount: 3, snapshot: snap, seed: 9);
+      final harness =
+          BinarySyncHarness(replicaCount: 3, snapshot: snap, seed: 9);
 
       harness.disconnect(2, 0);
       harness.disconnect(2, 1);

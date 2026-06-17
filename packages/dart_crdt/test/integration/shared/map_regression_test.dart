@@ -68,7 +68,10 @@ void main() {
 
       // A late update produced while replica 1 is disconnected.
       harness.disconnect(0, 1);
-      harness.mutate(0, (doc) => doc.getMap('attrs').setAttr('late', 'value-0'));
+      harness.mutate(
+        0,
+        (doc) => doc.getMap('attrs').setAttr('late', 'value-0'),
+      );
       harness.flush(duplicateDeliveries: 1);
       expect(harness.replicaAt(1).getMap('attrs').hasAttr('late'), isFalse);
 

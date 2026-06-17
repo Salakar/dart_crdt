@@ -96,7 +96,10 @@ void main() {
       harness.reconcileAll();
 
       harness.assertConverged();
-      expect(text(harness.replicaAt(0)).length, 'vee-two'.length + 'PRE-'.length);
+      expect(
+        text(harness.replicaAt(0)).length,
+        'vee-two'.length + 'PRE-'.length,
+      );
     });
   });
 }

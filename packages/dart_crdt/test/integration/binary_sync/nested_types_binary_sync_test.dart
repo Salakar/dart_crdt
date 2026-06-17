@@ -48,7 +48,8 @@ void main() {
       final a = Doc();
       final b = Doc();
 
-      final list = SharedType(kind: SharedTypeKind.array)..insertAll(0, ['x', 'y']);
+      final list = SharedType(kind: SharedTypeKind.array)
+        ..insertAll(0, ['x', 'y']);
       a.getMap('root').setAttr('list', list);
       (a.getMap('root').getAttr('list')! as SharedType).push('z');
 
@@ -97,9 +98,12 @@ void main() {
         return keys.map((k) => '$k=${child.getAttr(k)}').join('|');
       }
 
-      final harness = BinarySyncHarness(replicaCount: 3, snapshot: snap, seed: 4);
+      final harness =
+          BinarySyncHarness(replicaCount: 3, snapshot: snap, seed: 4);
       harness.mutate(0, (doc) {
-        doc.getMap('root').setAttr('child', SharedType(kind: SharedTypeKind.map));
+        doc
+            .getMap('root')
+            .setAttr('child', SharedType(kind: SharedTypeKind.map));
       });
       harness.flush();
 
@@ -115,7 +119,8 @@ void main() {
       harness.reconcileAll();
 
       harness.assertConverged();
-      final child = harness.replicaAt(2).getMap('root').getAttr('child')! as SharedType;
+      final child =
+          harness.replicaAt(2).getMap('root').getAttr('child')! as SharedType;
       expect(child.getAttrs(), {'a': 1, 'b': 2});
     });
   });

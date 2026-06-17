@@ -57,7 +57,8 @@ void main() {
     });
 
     test('concurrent writes to the same key converge to one winner', () {
-      final harness = BinarySyncHarness(replicaCount: 2, snapshot: snap, seed: 3);
+      final harness =
+          BinarySyncHarness(replicaCount: 2, snapshot: snap, seed: 3);
 
       // Both replicas write the same key while partitioned.
       harness.disconnect(0, 1);
@@ -77,7 +78,8 @@ void main() {
     });
 
     test('a replica that missed all traffic catches up via reconcile', () {
-      final harness = BinarySyncHarness(replicaCount: 3, snapshot: snap, seed: 11);
+      final harness =
+          BinarySyncHarness(replicaCount: 3, snapshot: snap, seed: 11);
 
       harness.disconnect(2, 0);
       harness.disconnect(2, 1);

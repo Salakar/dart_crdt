@@ -132,8 +132,14 @@ final class BinarySyncHarness {
   /// Delivers everything [from] knows that [to] is missing, as one diff.
   void _syncPair(int from, int to) {
     final diff = useV2
-        ? encodeStateAsUpdateV2(_docs[from], encodeDocumentStateVector(_docs[to]))
-        : encodeStateAsUpdate(_docs[from], encodeDocumentStateVector(_docs[to]));
+        ? encodeStateAsUpdateV2(
+            _docs[from],
+            encodeDocumentStateVector(_docs[to]),
+          )
+        : encodeStateAsUpdate(
+            _docs[from],
+            encodeDocumentStateVector(_docs[to]),
+          );
     _apply(to, diff);
   }
 
@@ -184,7 +190,8 @@ final class BinarySyncHarness {
   List<Uint8List> _fullStates() {
     return _docs
         .map(
-          (doc) => useV2 ? encodeStateAsUpdateV2(doc) : encodeStateAsUpdate(doc),
+          (doc) =>
+              useV2 ? encodeStateAsUpdateV2(doc) : encodeStateAsUpdate(doc),
         )
         .toList(growable: false);
   }

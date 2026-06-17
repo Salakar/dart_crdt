@@ -18,7 +18,10 @@ void main() {
       applyUpdate(b, encodeStateAsUpdate(a));
 
       expect(events, isNotEmpty);
-      expect(events.expand((k) => k).toSet(), containsAll(<Object?>['title', 'count']));
+      expect(
+        events.expand((k) => k).toSet(),
+        containsAll(<Object?>['title', 'count']),
+      );
       expect(b.getMap('m').getAttr('title'), 'Draft');
     });
 
