@@ -1,5 +1,64 @@
 # Changelog
 
+## 0.2.2
+
+Bug-fix release: lossless reconstruction of interleaved concurrent inserts from
+a single full-state update.
+
+### API Changes
+
+- No public API changes.
+
+### Fixes
+
+- Fixed silent data loss when a single full-state update (`encodeStateAsUpdate`,
+  `encodeStateAsUpdateV2`, or a `mergeUpdates` fold) built from two or more
+  clients' interleaved concurrent inserts at random interior positions was
+  applied to a fresh document. The pending-struct retry loop measured progress
+  by the number of pending update *entries*, but a single update whose structs
+  carry forward cross-client origin dependencies re-pends itself as the same one
+  entry every pass, so the entry count never decreased and the loop stopped
+  after a single retry — dropping every struct beyond the second dependency
+  layer (e.g. a 160-character co-edited document reconstructed to 22
+  characters). The retry now loops until a full pass integrates no further
+  structs, so a snapshot of any interleaving converges. The 0.2.1 fix for
+  out-of-order delivery of multiple updates is preserved; append-only and
+  already-causal updates are unaffected (they integrate on the first pass and
+  never re-pend).
+
+### Compatibility Summary
+
+- Wire format, state vectors, and update encoding are unchanged and remain
+  byte-compatible with 0.2.0 and 0.2.1. The fix only changes the in-memory retry
+  loop that re-applies causally-incomplete updates; no serialized bytes change.
+- The behavioural change is strictly corrective: documents that previously
+  reconstructed with dropped content now reconstruct in full. No previously
+  correct result changes.
+
+### Benchmark Summary
+
+- The common in-order path is unchanged: a causally-complete update leaves
+  nothing pending, so the retry loop body never executes and adds no overhead.
+- When reconstructing a document from a single update that carries forward
+  dependencies (e.g. applying a full-state snapshot of an interleaved concurrent
+  history), the retry performs one pass over the pending set per dependency
+  layer — previously capped at a single pass. Each struct still integrates at
+  most once. This cost is bounded and paid only on that reconstruction path.
+
+### Known Limitations
+
+- Relative positions anchored to a nested (non-root) shared type via a type id
+  still resolve against a detached placeholder; nested-type anchors are not yet
+  fully supported (root- and item-anchored positions are unaffected).
+
+### Verification
+
+- `melos run format`
+- `melos run analyze`
+- `melos run test`
+- `melos run test:long-random`
+- `dart pub publish --dry-run`
+
 ## 0.2.1
 
 Bug-fix release: web compilation, full-clear crashes, and out-of-order sync

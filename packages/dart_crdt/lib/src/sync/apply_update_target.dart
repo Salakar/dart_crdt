@@ -141,30 +141,38 @@ bool _applyDeleteSet(
 
 void _retryPendingStructs(Transaction transaction) {
   final store = transaction.doc.store;
-  // Re-apply every pending update to a fixpoint. Each pass removes the updates
-  // whose dependencies have now arrived (they integrate fully and are not
-  // re-pended); the rest re-pend themselves via `_readDecodedUpdate`. Because
-  // an update can depend on another that is also pending, integrating one may
-  // unblock the next, so loop until a pass makes no progress. Termination is
-  // guaranteed: the pending count strictly decreases each iteration or we stop.
-  var pendingCount = store.pendingStructUpdates.length;
-  while (pendingCount > 0) {
+  // Re-apply every pending update to a fixpoint. A pass makes progress in two
+  // ways: by draining an update whose dependencies have now arrived (it
+  // integrates fully and is not re-pended), or by integrating *some* of a single
+  // update's structs whose forward dependencies are only satisfied by structs
+  // that appear later in the same update. The canonical case for the latter is a
+  // full-state snapshot (`encodeStateAsUpdate` / `mergeUpdates`) of two clients'
+  // interleaved concurrent inserts: every struct is present in one update, but
+  // resolving its cross-client origins takes one sweep per dependency layer, and
+  // the still-incomplete remainder re-pends itself as the same single entry each
+  // pass. A pending-*count* metric never decreases there, so it would stop after
+  // one retry and silently drop every struct beyond the second layer. Track
+  // whether any struct actually integrated instead. Termination is guaranteed:
+  // each struct integrates at most once (a newly integrated struct advances its
+  // client clock and cannot re-integrate), so a pass that integrates nothing is
+  // a true fixpoint and ends the loop.
+  while (store.pendingStructUpdates.isNotEmpty) {
+    var integratedAny = false;
     for (final entry in store.takePendingStructUpdates()) {
       if (entry.update.isEmpty) {
         continue;
       }
-      _readDecodedUpdate(
+      final applied = _readDecodedUpdate(
         _decoderFor(entry.update, entry.version),
         transaction,
         updateBytes: entry.update,
         version: entry.version,
       );
+      integratedAny = integratedAny || applied;
     }
-    final remaining = store.pendingStructUpdates.length;
-    if (remaining >= pendingCount) {
+    if (!integratedAny) {
       break;
     }
-    pendingCount = remaining;
   }
 }
 
