@@ -21,7 +21,7 @@ extension SharedTypeAttributes on SharedType {
   /// Sets [key] to [value] using last-writer-wins conflict ordering.
   ///
   /// For an integrated root map the value is stored as a `parentSub` item and
-  /// conflicts resolve structurally (Yjs-style), so [clock] is advisory. A
+  /// conflicts resolve structurally by item-id order, so [clock] is advisory. A
   /// detached map keeps the in-memory clock-based resolution.
   void setAttr(String key, Object? value, {int? clock}) {
     _checkAttributeKey(key);

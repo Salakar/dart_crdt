@@ -64,6 +64,33 @@ void main() {
       );
     });
 
+    test('advances the state vector across repeated structs for one client',
+        () {
+      // Two structs from the same client exercise the running-max in the
+      // per-update state-vector derivation.
+      final doc = Doc(clientId: ClientId(1));
+      final parent = doc.itemParentForKey('root');
+      doc.store
+        ..add(
+          Item(id: _id(1, 0), parent: parent, content: ContentString('a')),
+        )
+        // A different content type so the two structs do not merge into one.
+        ..add(
+          Item(
+            id: _id(1, 1),
+            origin: _id(1, 0),
+            parent: parent,
+            content: ContentAny.fromObjects(<Object?>['b']),
+          ),
+        );
+
+      final vector = decodeStateVector(
+        encodeStateVectorFromUpdate(encodeStateAsUpdate(doc)),
+      );
+
+      expect(vector, {ClientId(1): Clock(2)});
+    });
+
     test('does not emit first-written skip output for unresolved updates', () {
       final unresolved = encodeStateAsUpdate(
         _docWithItem(1, 'abc'),

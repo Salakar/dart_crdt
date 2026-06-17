@@ -23,6 +23,7 @@ part 'doc_events.dart';
 part 'doc_gc.dart';
 part 'doc_formatting.dart';
 part 'doc_root_helpers.dart';
+part 'doc_store_access.dart';
 part 'shared_map.dart';
 part 'shared_map_store.dart';
 part 'shared_sequence.dart';
@@ -276,32 +277,6 @@ final class Doc {
     }
     return _itemParentsByKey.putIfAbsent(key, () => ItemParent(key: key));
   }
-
-  /// Returns the item parent for the nested type defined by [id], creating it
-  /// lazily so child items can resolve their parent before the defining
-  /// `ContentType` item has been integrated.
-  ItemParent itemParentForItemId(Id id) {
-    return _itemParentsByItemId.putIfAbsent(
-      id,
-      () => ItemParent(key: '', definingItemId: id),
-    );
-  }
-
-  /// Live nested shared type bound to the `ContentType` item [id], or `null`.
-  SharedType? sharedTypeForItemId(Id id) => _sharedTypeByItemId[id];
-
-  /// Registers the live nested shared type [type] for `ContentType` item [id].
-  void registerSharedTypeForItemId(Id id, SharedType type) {
-    _sharedTypeByItemId[id] = type;
-  }
-
-  /// Returns the store item parent backing [type] (root or nested), or `null`
-  /// when [type] is not store-backed. Used by relative-position resolution.
-  ItemParent? storeParentForType(SharedType type) => _storeParentFor(type);
-
-  /// Materializes (and binds) the live nested type defined by `ContentType`
-  /// [item]. Used by relative-position resolution.
-  SharedType liveNestedTypeForItem(Item item) => _liveNestedType(this, item);
 
   /// Returns the tracked subdocument guids.
   Set<String> getSubdocGuids() {

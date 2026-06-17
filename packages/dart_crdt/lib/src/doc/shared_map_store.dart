@@ -61,7 +61,7 @@ Object? _mapItemValue(Doc doc, Item item) {
 
 /// Sets a store-backed map attribute by appending a new `parentSub` item that
 /// supersedes (and deletes) the prior current item — structural last-writer
-/// resolution, the same mechanism Yjs uses.
+/// resolution, the same mechanism the integration engine already uses.
 void _setRootMapAttr(
   Transaction transaction,
   SharedType type,

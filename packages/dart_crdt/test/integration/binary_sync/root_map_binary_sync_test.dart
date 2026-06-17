@@ -5,7 +5,7 @@ import '../../helpers/binary_sync_harness.dart';
 
 /// M3: root maps must now sync over the binary wire path. Before M3 a map
 /// attribute encoded to an empty update and arrived missing. Conflicts resolve
-/// structurally (Yjs-style item-id order), not by the in-memory `clock:`.
+/// structurally (by item-id order), not by the in-memory `clock:`.
 void main() {
   // Order-independent, value-comparable snapshot for the harness check.
   String snap(Doc doc) {

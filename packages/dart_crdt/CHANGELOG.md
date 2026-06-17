@@ -27,7 +27,7 @@ synced; only root text did.
 
 - Fixed a latent wire-format bug: the V1 struct writer emitted an item's
   `parentSub` (map key) only inside the no-origin branch, while the decoder
-  reads it whenever the `0x20` header bit is set (as Yjs does). Map overwrites
+  reads it whenever the `0x20` header bit is set. Map overwrites
   carry an origin, so every superseding write would have dropped its key. The
   key is now written outside the parent block, matching the decoder. Existing
   fixtures are byte-identical (they contain no origin-bearing `parentSub`
@@ -36,15 +36,15 @@ synced; only root text did.
 ### Behaviour changes
 
 - `SharedType.setAttr(key, value, {clock})`: for an integrated root map,
-  conflicts now resolve structurally (Yjs item-id order) and `clock:` is
+  conflicts now resolve structurally (by item-id order) and `clock:` is
   advisory. Detached maps keep the in-memory clock-based last-writer-wins, so
   their behaviour is unchanged.
 
 ### Compatibility
 
-- The nested-type parent reference uses the Yjs wire format (`parentInfo(false)`
-  plus the defining item id). Root-only documents remain byte-compatible with
-  prior versions.
+- The nested-type parent reference uses the standard cross-implementation wire
+  format (`parentInfo(false)` plus the defining item id). Root-only documents
+  remain byte-compatible with prior versions.
 
 ## 0.2.2
 
