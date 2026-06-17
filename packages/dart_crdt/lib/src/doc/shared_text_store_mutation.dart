@@ -6,15 +6,14 @@ void _insertRootTextValues(
   int index,
   List<Object?> values,
 ) {
-  final rootKey = _rootKeyFor(type);
-  if (rootKey == null || values.isEmpty) {
+  final parent = _storeParentFor(type);
+  if (parent == null || values.isEmpty) {
     return;
   }
+  final document = transaction.doc;
   final target = _LocalTextIntegrationTarget(transaction);
   var insertionIndex = index;
   for (final run in _textContentRuns(values)) {
-    final document = transaction.doc;
-    final parent = document.itemParentForKey(rootKey);
     final origin = _textPositionAt(parent, insertionIndex - 1)?.lastId;
     final rightOrigin = _textPositionAt(parent, insertionIndex)?.firstId;
     _cleanItemBoundaries(
@@ -47,15 +46,15 @@ void _deleteRootTextRange(
   int index,
   int length,
 ) {
-  final rootKey = _rootKeyFor(type);
-  if (rootKey == null || length == 0) {
+  final parent = _storeParentFor(type);
+  if (parent == null || length == 0) {
     return;
   }
   final document = transaction.doc;
   final target = _LocalTextIntegrationTarget(transaction);
   final deleteEnd = index + length;
   var textIndex = 0;
-  for (final item in document.itemParentForKey(rootKey).items()) {
+  for (final item in parent.items()) {
     final itemTextLength = _itemTextLength(item);
     if (itemTextLength == 0) {
       continue;

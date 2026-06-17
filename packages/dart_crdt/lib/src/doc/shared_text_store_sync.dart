@@ -4,12 +4,11 @@ void _syncRootTextFromStoreIfNeeded(SharedType type) {
   if (type.kind != SharedTypeKind.text && type.kind != SharedTypeKind.xmlText) {
     return;
   }
-  final rootKey = _rootKeyFor(type);
-  final document = type.doc;
-  if (document == null || rootKey == null) {
+  final parent = _storeParentFor(type);
+  if (parent == null) {
     return;
   }
-  final values = _rootTextValues(document.itemParentForKey(rootKey));
+  final values = _rootTextValues(parent);
   if (_sameTextValues(type._sequence, values)) {
     return;
   }
@@ -36,6 +35,21 @@ String? _rootKeyFor(SharedType type) {
     }
   }
   return type.name.isEmpty ? null : type.name;
+}
+
+/// Returns the store [ItemParent] backing [type], or `null` when [type] is not
+/// store-backed.
+///
+/// This is the single gate that decides whether a shared type's content lives
+/// in the struct store (and therefore syncs over the wire) or only in the
+/// in-memory model. Today it resolves only root types via [_rootKeyFor]; later
+/// milestones extend it to nested types (addressed by their defining item id).
+ItemParent? _storeParentFor(SharedType type) {
+  final rootKey = _rootKeyFor(type);
+  if (rootKey == null) {
+    return null;
+  }
+  return type.doc!.itemParentForKey(rootKey);
 }
 
 List<Object?> _rootTextValues(ItemParent parent) {

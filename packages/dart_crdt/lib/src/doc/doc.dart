@@ -25,6 +25,7 @@ part 'doc_formatting.dart';
 part 'doc_root_helpers.dart';
 part 'shared_map.dart';
 part 'shared_sequence.dart';
+part 'shared_sequence_store.dart';
 part 'shared_text.dart';
 part 'shared_text_store_mutation.dart';
 part 'shared_text_store_sync.dart';

@@ -71,13 +71,13 @@ final class SharedType extends SharedTypePlaceholder
 
   @override
   int get length {
-    _syncRootTextFromStoreIfNeeded(this);
+    _syncSharedTypeView(this);
     return _sequence.length;
   }
 
   @override
   Iterator<Object?> get iterator {
-    _syncRootTextFromStoreIfNeeded(this);
+    _syncSharedTypeView(this);
     return List<Object?>.unmodifiable(_sequence).iterator;
   }
 

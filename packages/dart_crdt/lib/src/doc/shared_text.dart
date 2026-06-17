@@ -56,7 +56,7 @@ extension SharedTypeText on SharedType {
       'index',
     );
     final document = doc;
-    if (document != null && _rootKeyFor(this) != null) {
+    if (document != null && _storeParentFor(this) != null) {
       document.transact((transaction) {
         _deleteRootTextRange(transaction, this, index, length);
         _deleteTextValuesLocal(index, length);
@@ -182,7 +182,7 @@ extension SharedTypeText on SharedType {
       }
     }
     final document = doc;
-    if (document != null && _rootKeyFor(this) != null) {
+    if (document != null && _storeParentFor(this) != null) {
       document.transact((transaction) {
         _insertTextValuesLocal(index, values, attributes);
         _insertRootTextValues(transaction, this, index, values);
