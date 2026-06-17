@@ -1,12 +1,26 @@
 # Changelog
 
-## Unreleased
+## 0.3.0
 
-Store-backed maps, arrays, and nested shared types: these now serialize over the
+Store-backed maps, arrays, and nested shared types. These now serialize over the
 binary wire path (`encodeStateAsUpdate` / `applyUpdate`) with the struct store as
 the single source of truth, matching how root text already worked. Previously a
-root map or array — and any nested type — encoded to an empty update and never
-synced; only root text did.
+root map or array — and every nested type — encoded to an empty update and never
+synced.
+
+### API Changes
+
+- `SharedType.setAttr(key, value, {clock})`: for an integrated root map,
+  conflicts now resolve structurally (by item-id order) and the `clock:`
+  argument is advisory. Detached maps keep the in-memory clock-based
+  last-writer-wins, so their behaviour is unchanged. This is the only
+  behavioural change to an existing API.
+- `createRelativePositionFromTypeIndex` now accepts nested (non-root) shared
+  types; it previously threw `UnsupportedError` for them.
+- Added `Doc.itemParentForItemId`, `Doc.sharedTypeForItemId`,
+  `Doc.registerSharedTypeForItemId`, `Doc.storeParentForType`, and
+  `Doc.liveNestedTypeForItem` for nested-type resolution.
+- Added `ItemParent.definingItemId` and `ItemParent.subKeys`.
 
 ### Features
 
@@ -15,36 +29,58 @@ synced; only root text did.
   and the V2 format.
 - Nested shared types (a map/array/text inside another container) are now live,
   store-backed, and sync over the wire, including deep nesting and the
-  detached→integrated flush of a pre-populated type.
+  detached-to-integrated flush of a pre-populated type.
 - Remote `applyUpdate` now fires `SharedTypeEvent`s on the receiver's observers
-  for map/array changes (previously only local mutations emitted events).
-- **Relative positions anchored to a nested (non-root) shared type now resolve
-  to the live nested type with a content-aware index.** This removes the prior
-  limitation where such positions resolved against a detached placeholder at
-  index 0. `createRelativePositionFromTypeIndex` accepts nested types.
+  for map and array changes (previously only local mutations emitted events).
+- Relative positions anchored to a nested shared type resolve to the live nested
+  type with a content-aware index, replacing the previous detached-placeholder
+  result at index 0.
 
 ### Fixes
 
 - Fixed a latent wire-format bug: the V1 struct writer emitted an item's
   `parentSub` (map key) only inside the no-origin branch, while the decoder
-  reads it whenever the `0x20` header bit is set. Map overwrites
-  carry an origin, so every superseding write would have dropped its key. The
-  key is now written outside the parent block, matching the decoder. Existing
-  fixtures are byte-identical (they contain no origin-bearing `parentSub`
-  items).
+  reads it whenever the `0x20` header bit is set. Map overwrites carry an
+  origin, so every superseding write would have dropped its key. The key is now
+  written outside the parent block, matching the decoder.
 
-### Behaviour changes
+### Compatibility Summary
 
-- `SharedType.setAttr(key, value, {clock})`: for an integrated root map,
-  conflicts now resolve structurally (by item-id order) and `clock:` is
-  advisory. Detached maps keep the in-memory clock-based last-writer-wins, so
-  their behaviour is unchanged.
-
-### Compatibility
-
+- Root-only documents remain byte-compatible with 0.2.x: the existing
+  serialized compatibility fixtures regenerate byte-for-byte. Maps, arrays, and
+  nested types that previously produced empty updates now carry their content.
 - The nested-type parent reference uses the standard cross-implementation wire
-  format (`parentInfo(false)` plus the defining item id). Root-only documents
-  remain byte-compatible with prior versions.
+  format: when an item's parent is a nested type, the parent is encoded as
+  `parentInfo(false)` plus the defining item id instead of a root-name string.
+
+### Benchmark Summary
+
+- The smoke suite passes with the store-backed map/array paths exercised:
+  `map_set_delete_conflicts` ~1.9 ms/iteration,
+  `array_random_insert_delete_nested` ~4.9 ms/iteration, and
+  `xml_tree_insert_delete_stringify` ~1.9 ms/iteration, all well within the
+  suite threshold. Root text encode/decode hot paths are unchanged.
+
+### Known Limitations
+
+- Nested text formatting attributes are not yet flushed to the store: nested
+  text content syncs, but per-run formatting applied to a nested text does not.
+- The default unnamed root (`''`) is not store-backed; use a named root for
+  store-backed maps, arrays, and text.
+
+### Verification
+
+- `melos run format`
+- `melos run analyze`
+- `melos run validate`
+- `melos run docs`
+- `melos run test`
+- `melos run examples`
+- `melos run coverage` (95.70% overall line coverage; strict files at 100%)
+- `melos run benchmark:smoke`
+- `melos run js:smoke`
+- `melos run release:validate`
+- `dart pub publish --dry-run`
 
 ## 0.2.2
 
