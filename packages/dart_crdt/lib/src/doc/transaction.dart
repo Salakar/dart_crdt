@@ -206,15 +206,36 @@ final class Transaction {
   }
 
   void _emitSharedTypeEvents(void Function(void Function()) captureError) {
+    final emitted = <SharedType>{};
+    // Direct changes from local mutations carry their visible keys/indices.
     for (final entry in _changed.entries) {
       final target = entry.key;
       if (target is SharedType) {
+        emitted.add(target);
         final event = SharedTypeEvent(
           target: target,
           keys: entry.value,
           transaction: this,
         );
         captureError(() => target._emitEvent(event));
+      }
+    }
+    // Store-driven changes (notably remote applies) reach the type only through
+    // its parent; emit those that a local mutation did not already cover.
+    for (final entry in _changed.entries) {
+      final target = entry.key;
+      if (target is ItemParent) {
+        final type = _typeForItemParent(doc, target);
+        if (type == null || emitted.contains(type)) {
+          continue;
+        }
+        emitted.add(type);
+        final event = SharedTypeEvent(
+          target: type,
+          keys: entry.value,
+          transaction: this,
+        );
+        captureError(() => type._emitEvent(event));
       }
     }
   }

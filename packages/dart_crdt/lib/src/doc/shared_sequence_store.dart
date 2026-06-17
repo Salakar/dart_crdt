@@ -1,5 +1,13 @@
 part of 'doc.dart';
 
+/// Resolves a store [parent] back to its live root [SharedType], or `null`.
+///
+/// Root parents are keyed by name; nested parents (added in a later milestone)
+/// resolve via their defining item id.
+SharedType? _typeForItemParent(Doc doc, ItemParent parent) {
+  return doc.share[parent.key];
+}
+
 /// Rebuilds [type]'s in-memory view from the struct store when it is
 /// store-backed. Dispatches by kind so callers can sync any sequence-like type
 /// without knowing whether it is text or an array.
