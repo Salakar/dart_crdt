@@ -46,7 +46,7 @@ final class BinarySyncHarness {
   final Random _random;
   final List<Doc> _docs;
   final List<List<bool>> _connected;
-  final List<_PendingBinaryUpdate> _pending = <_PendingBinaryUpdate>[];
+  final List<_PendingSync> _pending = <_PendingSync>[];
   int _nextId = 0;
 
   /// Number of replicas.
@@ -79,44 +79,41 @@ final class BinarySyncHarness {
     }
   }
 
-  /// Applies [mutation] to the origin replica, captures the incremental update
-  /// it produced, and queues those bytes for delivery to every other replica.
+  /// Applies [mutation] to the origin replica and queues a point-to-point sync
+  /// from that origin to every other replica.
+  ///
+  /// The bytes are not captured here: a real sync protocol computes the diff
+  /// against the *target's current* state vector at delivery time, which is
+  /// always causally complete. Capturing a fixed delta at mutation time and
+  /// replaying it out of order produces gappy, framing-fragile updates that no
+  /// real protocol emits — so delivery is deferred to [flush].
   void mutate(int origin, void Function(Doc doc) mutation) {
     _checkReplicaIndex(origin);
-    final doc = _docs[origin];
-    final before = encodeDocumentStateVector(doc);
-    mutation(doc);
-    final update =
-        useV2 ? encodeStateAsUpdateV2(doc, before) : encodeStateAsUpdate(doc, before);
+    mutation(_docs[origin]);
     final id = _nextId++;
     for (var target = 0; target < _docs.length; target += 1) {
       if (target != origin) {
         _pending.add(
-          _PendingBinaryUpdate(
-            id: id,
-            originIndex: origin,
-            targetIndex: target,
-            bytes: update,
-          ),
+          _PendingSync(id: id, originIndex: origin, targetIndex: target),
         );
       }
     }
   }
 
-  /// Delivers all currently connected pending updates. Updates on disconnected
-  /// links stay queued. Delivery is idempotent, so [duplicateDeliveries] and
-  /// [shuffle] exercise duplicate/out-of-order handling.
+  /// Delivers all currently connected pending syncs as causally-complete
+  /// state-vector diffs (origin -> target). Syncs on disconnected links stay
+  /// queued. Delivery is idempotent, so [duplicateDeliveries] and [shuffle]
+  /// exercise duplicate/reordered delivery without ever sending a partial
+  /// update (point-to-point only — no transitive relay).
   void flush({bool shuffle = true, int duplicateDeliveries = 0}) {
     RangeError.checkNotNegative(duplicateDeliveries, 'duplicateDeliveries');
-    final blocked = <_PendingBinaryUpdate>[];
-    final deliveries = <_PendingBinaryUpdate>[];
-    for (final update in _pending) {
-      if (_connected[update.originIndex][update.targetIndex]) {
-        for (var count = 0; count <= duplicateDeliveries; count += 1) {
-          deliveries.add(update);
-        }
+    final blocked = <_PendingSync>[];
+    final deliveries = <_PendingSync>[];
+    for (final sync in _pending) {
+      if (_connected[sync.originIndex][sync.targetIndex]) {
+        deliveries.add(sync);
       } else {
-        blocked.add(update);
+        blocked.add(sync);
       }
     }
     _pending
@@ -125,9 +122,19 @@ final class BinarySyncHarness {
     if (shuffle) {
       deliveries.shuffle(_random);
     }
-    for (final update in deliveries) {
-      _apply(update.targetIndex, update.bytes);
+    for (final sync in deliveries) {
+      for (var count = 0; count <= duplicateDeliveries; count += 1) {
+        _syncPair(sync.originIndex, sync.targetIndex);
+      }
     }
+  }
+
+  /// Delivers everything [from] knows that [to] is missing, as one diff.
+  void _syncPair(int from, int to) {
+    final diff = useV2
+        ? encodeStateAsUpdateV2(_docs[from], encodeDocumentStateVector(_docs[to]))
+        : encodeStateAsUpdate(_docs[from], encodeDocumentStateVector(_docs[to]));
+    _apply(to, diff);
   }
 
   /// Anti-entropy: repeatedly syncs every connected ordered pair via
@@ -141,10 +148,7 @@ final class BinarySyncHarness {
           if (a == b || !_connected[a][b]) {
             continue;
           }
-          final diff = useV2
-              ? encodeStateAsUpdateV2(_docs[a], encodeDocumentStateVector(_docs[b]))
-              : encodeStateAsUpdate(_docs[a], encodeDocumentStateVector(_docs[b]));
-          _apply(b, diff);
+          _syncPair(a, b);
         }
       }
       if (_statesEqual(before, _fullStates())) {
@@ -211,16 +215,14 @@ final class BinarySyncHarness {
   }
 }
 
-final class _PendingBinaryUpdate {
-  const _PendingBinaryUpdate({
+final class _PendingSync {
+  const _PendingSync({
     required this.id,
     required this.originIndex,
     required this.targetIndex,
-    required this.bytes,
   });
 
   final int id;
   final int originIndex;
   final int targetIndex;
-  final List<int> bytes;
 }

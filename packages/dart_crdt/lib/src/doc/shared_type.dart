@@ -127,7 +127,7 @@ final class SharedType extends SharedTypePlaceholder
 
   @override
   SharedType copy() {
-    _syncRootTextFromStoreIfNeeded(this);
+    _syncSharedTypeView(this);
     final clone = SharedType(kind: kind, name: name);
     _copyAttributesInto(this, clone);
     _copySequenceInto(this, clone);

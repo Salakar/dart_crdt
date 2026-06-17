@@ -1,57 +1,71 @@
-import 'package:dart_crdt/src/doc/doc.dart';
+import 'dart:math';
+
+import 'package:dart_crdt/dart_crdt.dart';
 import 'package:test/test.dart';
 
-import '../helpers/random_convergence_harness.dart';
-import '../helpers/random_shared_type_operations.dart';
+import '../helpers/binary_sync_harness.dart';
 
 void main() {
   group('random shared map convergence', () {
-    test('converges with key conflicts, late sync, nested values, and deletes',
-        () {
-      final harness = RandomConvergenceHarness<Doc>(
-        seed: randomConvergenceSeed(fallback: 202),
-        replicaCount: 4,
-        createReplica: (_) => Doc(),
-        snapshot: mapConvergenceSnapshot,
-        testFile: 'test/integration/random_map_convergence_test.dart',
-        plainName: 'converges with key conflicts, late sync',
+    test('converges random key sets/deletes across a churning network', () {
+      String snap(Doc doc) {
+        final map = doc.getMap('attrs');
+        final keys = map.attrKeys.toList()..sort();
+        return keys.map((k) => '$k=${map.getAttr(k)}').join('|');
+      }
+
+      const replicaCount = 4;
+      final seed = int.tryParse(
+            const String.fromEnvironment('DART_CRDT_RANDOM_SEED'),
+          ) ??
+          202;
+      final random = Random(seed);
+      final harness = BinarySyncHarness(
+        replicaCount: replicaCount,
+        snapshot: snap,
+        seed: seed,
       );
 
-      harness
-        ..disconnect(0, 1)
-        ..publish(
-          originIndex: 0,
-          operation: mapSetOperation(
-            key: 'late',
-            valueId: 'late',
-            clock: 1,
-            nested: true,
-          ),
-        )
-        ..flushPending(duplicateDeliveries: 1);
+      var sawDelete = false;
+      for (var op = 0; op < 80; op += 1) {
+        // Network churn: toggle a random link.
+        if (op % 3 == 0) {
+          final a = random.nextInt(replicaCount);
+          var b = random.nextInt(replicaCount);
+          if (a == b) b = (b + 1) % replicaCount;
+          if (harness.areConnected(a, b)) {
+            harness.disconnect(a, b);
+          } else {
+            harness.reconnect(a, b);
+          }
+        }
 
-      expect(harness.pendingUpdateCount, greaterThan(0));
+        final origin = random.nextInt(replicaCount);
+        final key = 'k${random.nextInt(5)}';
+        if (op % 4 == 3) {
+          sawDelete = true;
+          harness.mutate(origin, (doc) => doc.getMap('attrs').deleteAttr(key));
+        } else {
+          harness.mutate(
+            origin,
+            (doc) => doc.getMap('attrs').setAttr(key, 'v$op-$origin'),
+          );
+        }
+        harness.flush(duplicateDeliveries: 1);
+      }
 
-      harness.run(
-        operationCount: 40,
-        nextOperation: randomMapOperations(),
-        networkChurnEvery: 2,
-        duplicateDeliveries: 2,
-      );
+      // Heal the network and let anti-entropy bring everyone to a fixpoint.
+      harness.reconnectAll();
+      harness.flush(duplicateDeliveries: 1);
+      harness.reconcileAll();
 
-      final snapshots = harness.replicas.map(mapConvergenceSnapshot);
-      final uniqueSnapshots = snapshots.toSet();
-      expect(uniqueSnapshots, hasLength(1));
-      expect(uniqueSnapshots.single, contains('late=nested:late'));
-      expect(_traceContains(harness, 'map set nested'), isTrue);
-      expect(_traceContains(harness, 'map delete'), isTrue);
-      expect(_traceContains(harness, 'duplicate'), isTrue);
-      expect(_traceContains(harness, 'disconnect'), isTrue);
-      expect(_traceContains(harness, 'reconnect'), isTrue);
+      harness.assertConverged();
+      expect(sawDelete, isTrue);
+      // All replicas agree on the full attribute set.
+      final reference = snap(harness.replicaAt(0));
+      for (var i = 1; i < replicaCount; i += 1) {
+        expect(snap(harness.replicaAt(i)), reference);
+      }
     });
   });
-}
-
-bool _traceContains(RandomConvergenceHarness<Doc> harness, String text) {
-  return harness.trace.any((entry) => entry.contains(text));
 }

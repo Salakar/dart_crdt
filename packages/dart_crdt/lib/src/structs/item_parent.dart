@@ -56,6 +56,9 @@ final class ItemParent {
   /// Returns the current item for a map-style [parentSub] key.
   Item? currentFor(String parentSub) => _currentBySubKey[parentSub];
 
+  /// Map-style keys that have a current item, in first-set order.
+  Iterable<String> get subKeys => _currentBySubKey.keys;
+
   /// Returns an immutable snapshot of items linked under [parentSub].
   List<Item> items({String? parentSub}) {
     final result = <Item>[];

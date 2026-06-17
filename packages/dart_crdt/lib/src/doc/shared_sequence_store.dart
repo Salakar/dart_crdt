@@ -4,10 +4,11 @@ part of 'doc.dart';
 /// store-backed. Dispatches by kind so callers can sync any sequence-like type
 /// without knowing whether it is text or an array.
 void _syncSharedTypeView(SharedType type) {
-  // Each helper returns early for kinds it does not handle, so calling both is
-  // safe and keeps a single sync entry point for the shared read paths.
+  // Each helper returns early for kinds it does not handle, so calling all
+  // three is safe and keeps a single sync entry point for the shared read paths.
   _syncRootTextFromStoreIfNeeded(type);
   _syncRootSequenceFromStoreIfNeeded(type);
+  _syncMapFromStoreIfNeeded(type);
 }
 
 /// Rebuilds a store-backed array's in-memory `_sequence` cache from the store.

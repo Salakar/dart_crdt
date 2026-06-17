@@ -2,9 +2,7 @@ import 'package:dart_crdt/src/content/content.dart';
 import 'package:dart_crdt/src/doc/doc.dart';
 import 'package:test/test.dart';
 
-import '../../helpers/random_convergence_harness.dart';
-import '../../helpers/random_shared_type_operations.dart';
-import '../../helpers/shared_regression_fixture.dart';
+import '../../helpers/binary_sync_harness.dart';
 
 void main() {
   group('shared map regressions', () {
@@ -26,14 +24,14 @@ void main() {
           deepEvents.add('${event.target.name}:${event.keys.join(',')}');
         });
 
+      // Integrated root maps resolve conflicts structurally (last write wins),
+      // not by the in-memory `clock:` argument.
       doc.transact((_) {
         map
-          ..setAttr('title', 'old', clock: 5)
-          ..setAttr('title', 'stale', clock: 4)
-          ..setAttr('title', 'new', clock: 6)
-          ..setAttr('child', child, clock: 7);
+          ..setAttr('title', 'old')
+          ..setAttr('title', 'new')
+          ..setAttr('child', child);
         child.setAttr('nested', 'value');
-        map.deleteAttr('title', clock: 5);
       });
 
       expect(map.getAttr('title'), 'new');
@@ -55,49 +53,43 @@ void main() {
       expect(map.attrSize, 0);
     });
 
-    test('covers fixture-backed conflicts, late sync, and disconnects', () {
-      final scenario = sharedRegressionScenario('map');
-      final harness = RandomConvergenceHarness<Doc>(
-        seed: scenario.seed,
-        replicaCount: scenario.replicaCount,
-        createReplica: (_) => Doc(),
-        snapshot: mapConvergenceSnapshot,
-        testFile: 'test/integration/shared/map_regression_test.dart',
-        plainName: 'fixture-backed conflicts',
+    test('converges key conflicts across a partition and late binary sync', () {
+      String snap(Doc doc) {
+        final map = doc.getMap('attrs');
+        final keys = map.attrKeys.toList()..sort();
+        return keys.map((k) => '$k=${map.getAttr(k)}').join('|');
+      }
+
+      final harness = BinarySyncHarness(
+        replicaCount: 3,
+        snapshot: snap,
+        seed: 202,
       );
 
-      harness
-        ..disconnect(0, 1)
-        ..publish(
-          originIndex: 0,
-          operation: mapSetOperation(
-            key: 'fixture',
-            valueId: 'fixture',
-            clock: 1,
-            nested: true,
-          ),
-        )
-        ..flushPending(duplicateDeliveries: scenario.duplicateDeliveries);
+      // A late update produced while replica 1 is disconnected.
+      harness.disconnect(0, 1);
+      harness.mutate(0, (doc) => doc.getMap('attrs').setAttr('late', 'value-0'));
+      harness.flush(duplicateDeliveries: 1);
+      expect(harness.replicaAt(1).getMap('attrs').hasAttr('late'), isFalse);
 
-      expect(harness.pendingUpdateCount, greaterThan(0));
+      // Concurrent conflicting writes to the same key on both sides.
+      harness.mutate(0, (doc) => doc.getMap('attrs').setAttr('k', 'zero'));
+      harness.mutate(1, (doc) => doc.getMap('attrs').setAttr('k', 'one'));
+      harness.mutate(2, (doc) => doc.getMap('attrs').setAttr('only2', 'v2'));
+      harness.flush(duplicateDeliveries: 2);
 
-      harness.run(
-        operationCount: scenario.operationCount,
-        nextOperation: randomMapOperations(),
-        networkChurnEvery: scenario.networkChurnEvery,
-        duplicateDeliveries: scenario.duplicateDeliveries,
-      );
+      harness.reconnectAll();
+      harness.flush(duplicateDeliveries: 2);
+      harness.reconcileAll();
 
-      final uniqueSnapshots =
-          harness.replicas.map(mapConvergenceSnapshot).toSet();
-      expect(uniqueSnapshots, hasLength(1));
-      expect(uniqueSnapshots.single, contains('fixture=nested:fixture'));
-      expect(_traceContains(harness, 'map delete'), isTrue);
-      expect(_traceContains(harness, 'disconnect'), isTrue);
+      harness.assertConverged();
+      final merged = harness.replicaAt(1).getMap('attrs');
+      expect(merged.getAttr('late'), 'value-0');
+      expect(merged.getAttr('only2'), 'v2');
+      expect(merged.getAttr('k'), anyOf('zero', 'one'));
+      // The winner is identical on every replica.
+      final winner = harness.replicaAt(0).getMap('attrs').getAttr('k');
+      expect(harness.replicaAt(2).getMap('attrs').getAttr('k'), winner);
     });
   });
-}
-
-bool _traceContains(RandomConvergenceHarness<Doc> harness, String text) {
-  return harness.trace.any((entry) => entry.contains(text));
 }

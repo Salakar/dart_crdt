@@ -24,6 +24,7 @@ part 'doc_gc.dart';
 part 'doc_formatting.dart';
 part 'doc_root_helpers.dart';
 part 'shared_map.dart';
+part 'shared_map_store.dart';
 part 'shared_sequence.dart';
 part 'shared_sequence_store.dart';
 part 'shared_text.dart';
