@@ -1,5 +1,51 @@
 # Changelog
 
+## Unreleased
+
+Store-backed maps, arrays, and nested shared types: these now serialize over the
+binary wire path (`encodeStateAsUpdate` / `applyUpdate`) with the struct store as
+the single source of truth, matching how root text already worked. Previously a
+root map or array — and any nested type — encoded to an empty update and never
+synced; only root text did.
+
+### Features
+
+- Root maps and arrays are now store-backed and converge over binary updates,
+  including concurrent edits, deletes, partitions, duplicate/reordered delivery,
+  and the V2 format.
+- Nested shared types (a map/array/text inside another container) are now live,
+  store-backed, and sync over the wire, including deep nesting and the
+  detached→integrated flush of a pre-populated type.
+- Remote `applyUpdate` now fires `SharedTypeEvent`s on the receiver's observers
+  for map/array changes (previously only local mutations emitted events).
+- **Relative positions anchored to a nested (non-root) shared type now resolve
+  to the live nested type with a content-aware index.** This removes the prior
+  limitation where such positions resolved against a detached placeholder at
+  index 0. `createRelativePositionFromTypeIndex` accepts nested types.
+
+### Fixes
+
+- Fixed a latent wire-format bug: the V1 struct writer emitted an item's
+  `parentSub` (map key) only inside the no-origin branch, while the decoder
+  reads it whenever the `0x20` header bit is set (as Yjs does). Map overwrites
+  carry an origin, so every superseding write would have dropped its key. The
+  key is now written outside the parent block, matching the decoder. Existing
+  fixtures are byte-identical (they contain no origin-bearing `parentSub`
+  items).
+
+### Behaviour changes
+
+- `SharedType.setAttr(key, value, {clock})`: for an integrated root map,
+  conflicts now resolve structurally (Yjs item-id order) and `clock:` is
+  advisory. Detached maps keep the in-memory clock-based last-writer-wins, so
+  their behaviour is unchanged.
+
+### Compatibility
+
+- The nested-type parent reference uses the Yjs wire format (`parentInfo(false)`
+  plus the defining item id). Root-only documents remain byte-compatible with
+  prior versions.
+
 ## 0.2.2
 
 Bug-fix release: lossless reconstruction of interleaved concurrent inserts from

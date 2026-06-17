@@ -295,6 +295,14 @@ final class Doc {
     _sharedTypeByItemId[id] = type;
   }
 
+  /// Returns the store item parent backing [type] (root or nested), or `null`
+  /// when [type] is not store-backed. Used by relative-position resolution.
+  ItemParent? storeParentForType(SharedType type) => _storeParentFor(type);
+
+  /// Materializes (and binds) the live nested type defined by `ContentType`
+  /// [item]. Used by relative-position resolution.
+  SharedType liveNestedTypeForItem(Item item) => _liveNestedType(this, item);
+
   /// Returns the tracked subdocument guids.
   Set<String> getSubdocGuids() {
     return Set<String>.unmodifiable(
