@@ -1,4 +1,5 @@
 import 'package:dart_crdt/src/binary/any_value.dart';
+import 'package:dart_crdt/src/binary/byte_reader.dart';
 import 'package:dart_crdt/src/binary/byte_writer.dart';
 import 'package:dart_crdt/src/binary/string_buffer_codec.dart';
 import 'package:dart_crdt/src/binary/uint_opt_rle_codec.dart';
@@ -69,6 +70,15 @@ void main() {
       expect(() => UpdateDecoderV1([128]).readLen(), throwsA(isA<Exception>()));
       expect(() => UpdateDecoderV1([]).readInfo(), throwsA(isA<Exception>()));
     });
+
+    test('fromReader retains only bytes after the outer reader offset', () {
+      final frame = UpdateEncoderV1()..writeLen(7);
+      final reader = ByteReader([99, ...frame.toBytes()])..readByte();
+      final decoder = UpdateDecoderV1.fromReader(reader);
+
+      expect(decoder.originalBytes, frame.toBytes());
+      expect(decoder.readLen(), 7);
+    });
   });
 
   group('UpdateDecoderV2', () {
@@ -132,6 +142,16 @@ void main() {
         () => UpdateDecoderV2([0, 1]),
         throwsA(isA<Exception>()),
       );
+    });
+
+    test('fromReader retains only the composed frame after an outer prefix',
+        () {
+      final frame = UpdateEncoderV2()..writeLen(7);
+      final reader = ByteReader([99, ...frame.toBytes()])..readByte();
+      final decoder = UpdateDecoderV2.fromReader(reader);
+
+      expect(decoder.originalBytes, frame.toBytes());
+      expect(decoder.readLen(), 7);
     });
   });
 }

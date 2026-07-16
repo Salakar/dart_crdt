@@ -9,6 +9,7 @@ import 'dart:typed_data';
 import '../binary/any_value.dart';
 import '../binary/varint_codec.dart';
 import '../content/content.dart';
+import '../content/content_text_index.dart';
 import '../delta/delta_operation.dart';
 import '../events/event_handler.dart';
 import '../metadata/id_range.dart';
@@ -280,8 +281,6 @@ final class Doc {
 
   /// Returns the tracked subdocument guids.
   Set<String> getSubdocGuids() {
-    return Set<String>.unmodifiable(
-      _subdocs.map((document) => document.guid),
-    );
+    return Set<String>.unmodifiable(_subdocs.map((document) => document.guid));
   }
 }

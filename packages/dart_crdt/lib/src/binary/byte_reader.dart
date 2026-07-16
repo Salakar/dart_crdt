@@ -53,6 +53,12 @@ final class ByteReader {
   /// Returns an immutable copy of the original input bytes.
   Uint8List toBytes() => Uint8List.fromList(_bytes).asUnmodifiableView();
 
+  /// Returns an immutable copy from the current [offset] to the end.
+  ///
+  /// Unlike [readBytes], this snapshot does not advance the reader.
+  Uint8List remainingBytes() =>
+      Uint8List.fromList(_bytes.sublist(_offset)).asUnmodifiableView();
+
   /// Reads a single byte and advances [offset].
   int readByte() {
     _requireAvailable(1);

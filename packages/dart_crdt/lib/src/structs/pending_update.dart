@@ -26,4 +26,17 @@ final class PendingStructs {
 
   /// Whether there are no missing dependencies and no pending bytes.
   bool get isEmpty => missing.isEmpty && update.isEmpty;
+
+  /// Whether [other] represents the exact same retry frame and wire version.
+  bool sameFrameAs(PendingStructs other) {
+    if (version != other.version || update.length != other.update.length) {
+      return false;
+    }
+    for (var index = 0; index < update.length; index += 1) {
+      if (update[index] != other.update[index]) {
+        return false;
+      }
+    }
+    return true;
+  }
 }

@@ -72,6 +72,15 @@ void _expectUpdateFixture(
     final regenerated = format == 'update-v1'
         ? encodeStateAsUpdate(doc)
         : encodeStateAsUpdateV2(doc);
+    if (fixtureCase['id'] == 'pending-updates') {
+      // This historical payload is a wire-Skip-only block. Skip frames a gap;
+      // it is not state and canonicalizes to an empty document update.
+      final empty = format == 'update-v1'
+          ? encodeStateAsUpdate(Doc())
+          : encodeStateAsUpdateV2(Doc());
+      expect(_hex(regenerated), _hex(empty), reason: '$format framing-only');
+      continue;
+    }
     expect(
       _hex(regenerated),
       _hex(payload),

@@ -114,7 +114,12 @@ Item _cloneDeletedItem(Doc doc, Item item) {
   return Item(
     id: Id(client: doc.clientId, clock: doc.store.getClock(doc.clientId)),
     origin: item.origin,
-    rightOrigin: item.rightOrigin,
+    // A split string item often has no encoded right-origin even though its
+    // live right neighbor identifies the original slot precisely. Preserve
+    // that boundary when resurrecting content so interior deletion rejection
+    // restores the item before its original right neighbor.
+    rightOrigin: item.right?.id ?? item.rightOrigin,
+    right: item.right,
     parent: item.parent,
     parentSub: item.parentSub,
     content: item.content.copy(),

@@ -1,6 +1,7 @@
 /// Stable relative and absolute position value objects.
 library;
 
+import 'dart:math';
 import 'dart:typed_data';
 
 import '../binary/byte_reader.dart';
@@ -8,6 +9,7 @@ import '../binary/byte_writer.dart';
 import '../binary/string_buffer_codec.dart';
 import '../binary/varint_codec.dart';
 import '../content/content.dart';
+import '../content/content_text_index.dart';
 import '../doc/doc.dart';
 import '../structs/abstract_struct.dart';
 import '../structs/id.dart';
@@ -44,12 +46,8 @@ final class MalformedRelativePositionException implements FormatException {
 /// A mutation-stable position anchored to an item, root type, or nested type.
 final class RelativePosition implements Comparable<RelativePosition> {
   /// Creates a relative position.
-  RelativePosition({
-    this.typeId,
-    this.rootName,
-    this.itemId,
-    int assoc = 0,
-  }) : assoc = _checkAssoc(assoc) {
+  RelativePosition({this.typeId, this.rootName, this.itemId, int assoc = 0})
+      : assoc = _checkAssoc(assoc) {
     _checkHasAnchor(typeId: typeId, rootName: rootName, itemId: itemId);
   }
 
@@ -129,11 +127,8 @@ final class RelativePosition implements Comparable<RelativePosition> {
 /// A document-local position resolved from a [RelativePosition].
 final class AbsolutePosition {
   /// Creates an absolute position in [type] at [index].
-  AbsolutePosition({
-    required this.type,
-    required int index,
-    int assoc = 0,
-  })  : index = RangeError.checkNotNegative(index, 'index'),
+  AbsolutePosition({required this.type, required int index, int assoc = 0})
+      : index = RangeError.checkNotNegative(index, 'index'),
         assoc = _checkAssoc(assoc);
 
   /// Shared type containing the resolved position.

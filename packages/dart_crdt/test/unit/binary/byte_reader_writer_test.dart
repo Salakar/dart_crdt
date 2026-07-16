@@ -55,6 +55,16 @@ void main() {
       expect(() => chunk[0] = 7, throwsUnsupportedError);
     });
 
+    test('snapshots remaining bytes without advancing', () {
+      final reader = ByteReader([9, 1, 2])..readByte();
+
+      final remaining = reader.remainingBytes();
+
+      expect(remaining, [1, 2]);
+      expect(reader.offset, 1);
+      expect(() => remaining[0] = 7, throwsUnsupportedError);
+    });
+
     test('throws clear exceptions for truncated input', () {
       final reader = ByteReader([1, 2]);
       reader.readByte();

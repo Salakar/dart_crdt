@@ -11,6 +11,8 @@ import '../binary/varint_codec.dart';
 import '../events/event_handler.dart';
 import '../structs/id.dart';
 
+part 'awareness_codec.dart';
+
 /// A client awareness snapshot.
 final class AwarenessState {
   /// Creates an awareness state.
@@ -141,17 +143,47 @@ final class Awareness {
   AwarenessChange applyAwarenessUpdate(List<int> update) {
     final reader = ByteReader(update);
     final count = readVarUint(reader);
+    // Decode and validate the complete frame before mutating state. Presence
+    // updates are small, and atomic rejection is substantially safer than
+    // committing a valid prefix of a malformed provider frame.
+    final decoded = <AwarenessState>[
+      for (var index = 0; index < count; index += 1)
+        _readAwarenessState(reader),
+    ];
+    if (!reader.isDone) {
+      throw FormatException(
+        'Trailing awareness update bytes.',
+        update,
+        reader.offset,
+      );
+    }
+
     final added = <ClientId>{};
     final updated = <ClientId>{};
     final removed = <ClientId>{};
-
-    for (var index = 0; index < count; index += 1) {
-      final state = _readAwarenessState(reader);
+    for (final state in decoded) {
       final previous = _states[state.clientId];
       if (!_isNewer(state, previous)) {
         continue;
       }
-      final accepted = _applyState(state, emit: false);
+      var acceptedState = state;
+      if (state.clientId == localClientId) {
+        if (state.clock > _localClock) {
+          _localClock = state.clock;
+        }
+        if (state.isRemoved && previous != null && !previous.isRemoved) {
+          // A relayed timeout may echo this client's equal-clock tombstone back
+          // to its owner. Keep the locally owned payload authoritative and move
+          // its clock beyond the tombstone so the provider can re-fan it.
+          _localClock += 1;
+          acceptedState = AwarenessState(
+            clientId: localClientId,
+            clock: _localClock,
+            state: previous.state,
+          );
+        }
+      }
+      final accepted = _applyState(acceptedState, emit: false);
       if (accepted == _AwarenessChangeKind.added) {
         added.add(state.clientId);
       } else if (accepted == _AwarenessChangeKind.updated) {
@@ -159,13 +191,6 @@ final class Awareness {
       } else if (accepted == _AwarenessChangeKind.removed) {
         removed.add(state.clientId);
       }
-    }
-    if (!reader.isDone) {
-      throw FormatException(
-        'Trailing awareness update bytes.',
-        update,
-        reader.offset,
-      );
     }
 
     final change = AwarenessChange(
@@ -187,8 +212,12 @@ final class Awareness {
       if (previous == null || previous.isRemoved) {
         continue;
       }
-      final clock =
-          client == localClientId ? ++_localClock : previous.clock + 1;
+      // A provider may time out a remote client, but it does not own that
+      // client's clock. Reuse the last observed clock for a remote tombstone;
+      // equal-clock removal wins over a visible state, while the source's very
+      // next clock can make it visible again. Only this instance's local client
+      // advances its own clock.
+      final clock = client == localClientId ? ++_localClock : previous.clock;
       final state = AwarenessState(
         clientId: client,
         clock: clock,
@@ -248,49 +277,4 @@ Uint8List removeAwarenessStates(
   Iterable<ClientId> clients,
 ) {
   return awareness.removeAwarenessStates(clients);
-}
-
-enum _AwarenessChangeKind { added, updated, removed }
-
-bool _isNewer(AwarenessState next, AwarenessState? previous) {
-  return previous == null || next.clock > previous.clock;
-}
-
-_AwarenessChangeKind? _changeKind(
-  AwarenessState? previous,
-  AwarenessState next,
-) {
-  if (previous == next) {
-    return null;
-  }
-  if (previous == null || previous.isRemoved) {
-    return next.isRemoved ? null : _AwarenessChangeKind.added;
-  }
-  if (next.isRemoved) {
-    return _AwarenessChangeKind.removed;
-  }
-  return _AwarenessChangeKind.updated;
-}
-
-AwarenessState _readAwarenessState(ByteReader reader) {
-  final clientId = ClientId(readVarUint(reader));
-  final clock = readVarUint(reader);
-  final hasState = reader.readByte();
-  if (hasState == 0) {
-    return AwarenessState(clientId: clientId, clock: clock, state: null);
-  }
-  if (hasState != 1) {
-    throw FormatException('Invalid awareness state marker $hasState.');
-  }
-  final value = readJsonValue(reader);
-  if (value is! JsonMap) {
-    throw const FormatException('Awareness state must be a JSON object.');
-  }
-  return AwarenessState(clientId: clientId, clock: clock, state: value);
-}
-
-JsonMap _jsonMap(Map<String, Object?> state) {
-  return JsonMap(
-    state.map((key, value) => MapEntry(key, JsonValue.fromObject(value))),
-  );
 }

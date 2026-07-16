@@ -10,7 +10,8 @@ section.
 - `0.1.0`: binary primitives and package scaffold.
 - `0.2.0`: core document, shared type, transactions, arrays/maps/text basics.
 - `0.3.0`: full V1/V2 update encoding and sync utilities.
-- `0.4.0`: snapshots, relative positions, undo/redo.
+- `0.4.0`: collaboration safety for causal updates, Unicode positions,
+  awareness, and fail-closed attribution decisions.
 - `0.5.0`: attribution, suggestions, subdocuments, XML/tree behavior.
 - `0.9.0`: parity tests passing, docs complete, benchmark baselines stable.
 - `1.0.0`: full parity verified, no known compatibility gaps, pub.dev polish
@@ -83,5 +84,8 @@ Benchmark summary: the full suite covered 24 benchmarks. The slowest cases were
 `array_random_insert_delete_nested` at 63.93 ms/iteration, both below the
 500 ms full-suite threshold.
 
-Known limitation: `0.1.0` is a pre-1.0 release and is not a stable `1.0.0` API
-contract.
+Known limitations for `0.4.0`: causally incomplete merge/diff/format/
+obfuscation input still requires the original update journal; raw pending
+structs are not re-emitted by state snapshots; arbitrary partial attribution
+decisions and store-backed rich-text formatting remain unsupported. This is a
+pre-1.0 release and is not a stable `1.0.0` API contract.

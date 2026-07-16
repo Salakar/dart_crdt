@@ -107,6 +107,36 @@ void main() {
       expect(store.pendingDeleteSet.isEmpty, isTrue);
       expect(store.pendingStructUpdate, isNull);
     });
+
+    test('deduplicates exact pending bytes within, but not across, versions',
+        () {
+      final store = StructStore()
+        ..addPendingStructUpdate(
+          PendingStructs(
+            missing: {ClientId(1): Clock(0)},
+            update: [1, 2, 3],
+          ),
+        )
+        ..addPendingStructUpdate(
+          PendingStructs(
+            missing: {ClientId(9): Clock(8)},
+            update: [1, 2, 3],
+          ),
+        )
+        ..addPendingStructUpdate(
+          PendingStructs(
+            missing: {ClientId(1): Clock(0)},
+            update: [1, 2, 3],
+            version: 2,
+          ),
+        );
+
+      expect(store.pendingStructUpdates, hasLength(2));
+      expect(
+        store.pendingStructUpdates.map((entry) => entry.version),
+        [1, 2],
+      );
+    });
   });
 
   group('StructStore integrity checks', () {

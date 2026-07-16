@@ -29,35 +29,32 @@ void main() {
         ..add(_item(2, 0, 'hi'))
         ..add(GC(id: _id(1, 0), length: 2));
 
-      expect(
-        encodeStateAsUpdate(doc),
-        [
-          2,
-          1,
-          2,
-          0,
-          4,
-          1,
-          4,
-          114,
-          111,
-          111,
-          116,
-          2,
-          104,
-          105,
-          1,
-          1,
-          0,
-          0,
-          2,
-          1,
-          1,
-          1,
-          0,
-          2,
-        ],
-      );
+      expect(encodeStateAsUpdate(doc), [
+        2,
+        1,
+        2,
+        0,
+        4,
+        1,
+        4,
+        114,
+        111,
+        111,
+        116,
+        2,
+        104,
+        105,
+        1,
+        1,
+        0,
+        0,
+        2,
+        1,
+        1,
+        1,
+        0,
+        2,
+      ]);
       expect(
         createDeleteSetFromStore(doc.store),
         IdSet()..add(_id(1, 0), length: 2),
@@ -69,27 +66,36 @@ void main() {
       doc.store.add(_item(1, 0, 'abc'));
       final target = encodeStateVector({ClientId(1): Clock(1)});
 
-      expect(
-        encodeStateAsUpdate(doc, target),
-        [1, 1, 1, 1, 132, 1, 0, 2, 98, 99, 0],
-      );
+      expect(encodeStateAsUpdate(doc, target), [
+        1,
+        1,
+        1,
+        1,
+        132,
+        1,
+        0,
+        2,
+        98,
+        99,
+        0,
+      ]);
       expect(encodeStateAsUpdate(doc, encodeDocumentStateVector(doc)), [0, 0]);
     });
 
-    test('includes pending delete sets and pending struct ranges', () {
-      final doc = Doc(clientId: ClientId(9));
-      doc.store
-        ..addPendingDeleteSet(IdSet()..add(_id(4, 1), length: 2))
-        ..addPendingStructs(BlockSet()..add(_id(3, 5), length: 4));
+    test(
+      'includes pending deletes without synthesizing pending Skip ranges',
+      () {
+        final doc = Doc(clientId: ClientId(9));
+        doc.store
+          ..addPendingDeleteSet(IdSet()..add(_id(4, 1), length: 2))
+          ..addPendingStructs(BlockSet()..add(_id(3, 5), length: 4));
 
-      expect(encodeStateAsUpdate(doc), [1, 1, 3, 5, 10, 4, 1, 4, 1, 1, 2]);
+        expect(encodeStateAsUpdate(doc), [0, 1, 4, 1, 1, 2]);
 
-      final target = encodeStateVector({ClientId(3): Clock(6)});
-      expect(
-        encodeStateAsUpdate(doc, target),
-        [1, 1, 3, 6, 10, 3, 1, 4, 1, 1, 2],
-      );
-    });
+        final target = encodeStateVector({ClientId(3): Clock(6)});
+        expect(encodeStateAsUpdate(doc, target), [0, 1, 4, 1, 1, 2]);
+      },
+    );
   });
 
   group('encodeStateAsUpdateV2', () {

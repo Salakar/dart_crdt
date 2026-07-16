@@ -2,6 +2,7 @@
 library;
 
 import 'dart:convert';
+import 'dart:typed_data';
 
 import '../binary/any_codec.dart';
 import '../binary/any_value.dart';
@@ -40,10 +41,20 @@ final class MalformedUpdateException implements FormatException {
 /// V1 update decoder over direct varint fields.
 final class UpdateDecoderV1 extends IdSetDecoderV1 {
   /// Creates a V1 update decoder over [bytes].
-  UpdateDecoderV1(super.bytes);
+  UpdateDecoderV1(super.bytes)
+      : originalBytes = Uint8List.fromList(bytes).asUnmodifiableView(),
+        super();
 
   /// Creates a V1 update decoder from [reader].
-  UpdateDecoderV1.fromReader(super.reader) : super.fromReader();
+  UpdateDecoderV1.fromReader(super.reader)
+      : originalBytes = reader.remainingBytes(),
+        super.fromReader();
+
+  /// Immutable copy of the complete V1 frame supplied to this decoder.
+  ///
+  /// Low-level streaming application retains these bytes when causal
+  /// dependencies are missing so it can retry the complete frame later.
+  final Uint8List originalBytes;
 
   /// Reads a left-origin id.
   Id readLeftId() => Id.read(restReader);
@@ -93,6 +104,7 @@ final class UpdateDecoderV2 extends IdSetDecoderV2 {
 
   /// Creates a V2 update decoder from [reader].
   factory UpdateDecoderV2.fromReader(ByteReader reader) {
+    final originalBytes = reader.remainingBytes();
     final featureFlag = readVarUint(reader);
     if (featureFlag != 0) {
       throw MalformedUpdateException(
@@ -101,6 +113,7 @@ final class UpdateDecoderV2 extends IdSetDecoderV2 {
       );
     }
     return UpdateDecoderV2._(
+      originalBytes: originalBytes,
       featureFlag: featureFlag,
       keyClocks: string_codec.readByteBuffer(reader),
       clients: string_codec.readByteBuffer(reader),
@@ -116,6 +129,7 @@ final class UpdateDecoderV2 extends IdSetDecoderV2 {
   }
 
   UpdateDecoderV2._({
+    required this.originalBytes,
     required this.featureFlag,
     required List<int> keyClocks,
     required List<int> clients,
@@ -140,6 +154,13 @@ final class UpdateDecoderV2 extends IdSetDecoderV2 {
 
   /// Feature flag read from the V2 update header.
   final int featureFlag;
+
+  /// Immutable copy of the complete composed V2 frame supplied to this
+  /// decoder.
+  ///
+  /// This is intentionally not `restReader`: V2 stores most fields in nine
+  /// side streams before the unprefixed rest buffer.
+  final Uint8List originalBytes;
 
   final IntDiffOptRleDecoder _keyClockDecoder;
   final UintOptRleDecoder _clientDecoder;

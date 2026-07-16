@@ -62,14 +62,19 @@ void main() {
         ContentIds(inserts: _set([(1, 1, 2)])),
       );
 
-      expect(
-        createContentIdsFromUpdate(filtered),
-        ContentIds(inserts: _set([(1, 1, 2)])),
-      );
+      // The selected clocks are encoded after a wire Skip. Materializing the
+      // update on an empty document cannot inspect or apply them because the
+      // omitted clock is real causal state, not a stored placeholder.
+      final emptyTarget = Doc();
+      applyUpdate(emptyTarget, filtered);
+      expect(emptyTarget.store.pendingStructs.isNotEmpty, isTrue);
+      expect(_text(emptyTarget), isEmpty);
 
       final target = Doc();
+      applyUpdate(target, encodeStateAsUpdate(_docWithItem('a')));
       applyUpdate(target, filtered);
-      expect(_text(target), 'bc');
+      expect(target.store.inserted, _set([(1, 0, 3)]));
+      expect(_text(target), 'abc');
     });
 
     test('filters delete sets independently from inserts', () {

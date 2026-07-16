@@ -58,7 +58,7 @@ void _deleteRootTextRange(
   final deleteEnd = index + length;
   var textIndex = 0;
   for (final item in parent.items()) {
-    final itemTextLength = _itemTextLength(item);
+    final itemTextLength = ContentTextIndex.visibleLength(item);
     if (itemTextLength == 0) {
       continue;
     }
@@ -66,11 +66,11 @@ void _deleteRootTextRange(
     final itemDeleteStart = max(index, textIndex);
     final itemDeleteEnd = min(deleteEnd, itemTextEnd);
     if (itemDeleteStart < itemDeleteEnd) {
-      final startOffset = _itemClockOffsetAtTextOffset(
+      final startOffset = ContentTextIndex.clockOffsetAtTextOffset(
         item,
         itemDeleteStart - textIndex,
       );
-      final endOffset = _itemClockOffsetAtTextOffset(
+      final endOffset = ContentTextIndex.clockOffsetAtTextOffset(
         item,
         itemDeleteEnd - textIndex,
       );
@@ -135,13 +135,19 @@ _TextClockPosition? _textPositionAt(ItemParent parent, int index) {
   }
   var remaining = index;
   for (final item in parent.items()) {
-    final textLength = _itemTextLength(item);
+    final textLength = ContentTextIndex.visibleLength(item);
     if (textLength == 0) {
       continue;
     }
     if (remaining < textLength) {
-      final clockOffset = _itemClockOffsetAtTextOffset(item, remaining);
-      final nextClockOffset = _itemClockOffsetAtTextOffset(item, remaining + 1);
+      final clockOffset = ContentTextIndex.clockOffsetAtTextOffset(
+        item,
+        remaining,
+      );
+      final nextClockOffset = ContentTextIndex.clockOffsetAtTextOffset(
+        item,
+        remaining + 1,
+      );
       return _TextClockPosition(
         item: item,
         clockOffset: clockOffset,
@@ -151,42 +157,6 @@ _TextClockPosition? _textPositionAt(ItemParent parent, int index) {
     remaining -= textLength;
   }
   return null;
-}
-
-int _itemTextLength(Item item) {
-  if (item.deleted || !item.countable) {
-    return 0;
-  }
-  return switch (item.content) {
-    ContentString(:final value) => value.runes.length,
-    ContentType() => 1,
-    final content => content.length,
-  };
-}
-
-int _itemClockOffsetAtTextOffset(Item item, int textOffset) {
-  RangeError.checkValueInInterval(textOffset, 0, _itemTextLength(item));
-  return switch (item.content) {
-    ContentString(:final value) => _stringClockOffsetAtTextOffset(
-        value,
-        textOffset,
-      ),
-    _ => textOffset,
-  };
-}
-
-int _stringClockOffsetAtTextOffset(String value, int textOffset) {
-  RangeError.checkValueInInterval(textOffset, 0, value.runes.length);
-  var index = 0;
-  var offset = 0;
-  for (final rune in value.runes) {
-    if (index == textOffset) {
-      return offset;
-    }
-    offset += String.fromCharCode(rune).length;
-    index += 1;
-  }
-  return offset;
 }
 
 void _cleanItemBoundaries(
@@ -203,10 +173,7 @@ void _cleanItemBoundaries(
 }
 
 final class _TextContentRun {
-  const _TextContentRun({
-    required this.content,
-    required this.textLength,
-  });
+  const _TextContentRun({required this.content, required this.textLength});
 
   final AbstractContent content;
   final int textLength;

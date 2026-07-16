@@ -181,8 +181,16 @@ final class StructStore implements StructIntegrationTarget, ItemLookup {
     pending.insertInto(_pendingStructs);
   }
 
-  /// Appends a causally-incomplete struct update awaiting dependencies.
+  /// Retains a causally-incomplete struct update awaiting dependencies.
+  ///
+  /// Byte-identical frames are deduplicated within each wire version. Missing
+  /// clocks are diagnostic; frame bytes identify the retry work.
   void addPendingStructUpdate(PendingStructs pending) {
+    if (_pendingStructUpdates.any(
+      (existing) => existing.sameFrameAs(pending),
+    )) {
+      return;
+    }
     _pendingStructUpdates.add(pending);
   }
 

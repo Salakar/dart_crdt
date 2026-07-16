@@ -43,6 +43,10 @@ void writeStateAsUpdateV2(
 ///
 /// When [encodedTargetStateVector] is provided, only state missing from that
 /// vector is written. Passing `null` writes all known state.
+///
+/// Causally incomplete raw updates retained in `document.store` are not yet
+/// re-emitted. Providers must retain the original update journal until the
+/// document's pending structs have integrated.
 Uint8List encodeStateAsUpdate(
   Doc document, [
   List<int>? encodedTargetStateVector,
@@ -60,6 +64,10 @@ Uint8List encodeStateAsUpdate(
 ///
 /// When [encodedTargetStateVector] is provided, only state missing from that
 /// vector is written. Passing `null` writes all known state.
+///
+/// Causally incomplete raw updates retained in `document.store` are not yet
+/// re-emitted. Providers must retain the original update journal until the
+/// document's pending structs have integrated.
 Uint8List encodeStateAsUpdateV2(
   Doc document, [
   List<int>? encodedTargetStateVector,
@@ -114,7 +122,6 @@ List<_ClientPlan> _clientPlans(
   StateVector targetStateVector,
 ) {
   final storedRanges = <ClientId, List<IdRange>>{};
-  final pendingRanges = <ClientId, List<IdRange>>{};
 
   for (final client in store.clients) {
     final targetClock = targetStateVector[client] ?? Clock(0);
@@ -131,23 +138,18 @@ List<_ClientPlan> _clientPlans(
     }
   }
 
-  final pending = store.pendingStructs.excludeKnown(targetStateVector);
-  for (final client in pending.clients) {
-    for (final range in pending.rangesFor(client)) {
-      _addRange(pendingRanges, client, range.idRange);
-    }
-  }
-
-  final clients = <ClientId>{...storedRanges.keys, ...pendingRanges.keys}
-      .toList()
+  // Pending ranges describe clocks whose concrete structs have not integrated
+  // yet. Encoding those ranges as wire Skip structs falsely claims that the
+  // receiver may advance past them and permanently masks the real content.
+  // Until raw pending update export is implemented, only integrated store
+  // state is emitted here; callers must retain their original update journal.
+  final clients = storedRanges.keys.toList()
     ..sort((left, right) => right.compareTo(left));
   final plans = <_ClientPlan>[];
   for (final client in clients) {
     final entries = <_StructEntry>[
       for (final range in storedRanges[client] ?? const <IdRange>[])
         ..._storedEntries(store, client, range),
-      for (final range in pendingRanges[client] ?? const <IdRange>[])
-        _pendingEntry(client, range),
     ]..sort((left, right) => left.start.compareTo(right.start));
     final normalized = _normalizeEntries(client, entries);
     if (normalized.isNotEmpty) {
@@ -186,17 +188,6 @@ List<_StructEntry> _storedEntries(
         end: slice.range.end,
       ),
   ];
-}
-
-_StructEntry _pendingEntry(ClientId client, IdRange range) {
-  return _StructEntry(
-    struct:
-        Skip(id: Id(client: client, clock: range.start), length: range.length),
-    offset: 0,
-    offsetEnd: 0,
-    start: range.start.value,
-    end: range.end,
-  );
 }
 
 List<_StructEntry> _normalizeEntries(
@@ -243,10 +234,7 @@ List<_StructEntry> _normalizeEntries(
 }
 
 final class _ClientPlan {
-  const _ClientPlan({
-    required this.client,
-    required this.entries,
-  });
+  const _ClientPlan({required this.client, required this.entries});
 
   final ClientId client;
   final List<_StructEntry> entries;

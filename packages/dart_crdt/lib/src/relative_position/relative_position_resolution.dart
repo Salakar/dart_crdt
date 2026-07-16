@@ -1,6 +1,12 @@
 part of 'relative_position.dart';
 
 /// Returns the visible length contribution for [item].
+///
+/// For [ContentString] items the default unit is a Unicode scalar value, which
+/// matches the indexing used by `SharedType` text methods. Custom callbacks
+/// retain the legacy one-visible-unit-per-clock behavior within an item. This
+/// is keyed on callback identity, not the returned length: a wrapper that
+/// happens to return the same scalar count is still a custom clock-unit view.
 typedef RelativePositionContentLength = int Function(Item item);
 
 /// Creates a relative position from [type] and visible [index].
@@ -42,6 +48,10 @@ RelativePosition createRelativePositionFromTypeIndex(
     );
   }
   final totalLength = _parentLength(parent, contentLength);
+  final usesDefaultTextIndex = identical(
+    contentLength,
+    defaultRelativeContentLength,
+  );
   RangeError.checkValueInInterval(index, 0, totalLength, 'index');
 
   var remaining = index;
@@ -55,10 +65,15 @@ RelativePosition createRelativePositionFromTypeIndex(
   for (final item in parent.items()) {
     final length = contentLength(item);
     if (length > remaining) {
+      final clockOffset = _clockOffsetAtRelativeOffset(
+        item,
+        remaining,
+        usesDefaultTextIndex: usesDefaultTextIndex,
+      );
       return RelativePosition(
         rootName: rootName,
         typeId: typeId,
-        itemId: item.id.advance(remaining),
+        itemId: item.id.advance(clockOffset),
         assoc: assoc,
       );
     }
@@ -116,7 +131,7 @@ AbsolutePosition? createAbsolutePositionFromRelativePosition(
 
 /// Default visible content length for relative-position resolution.
 int defaultRelativeContentLength(Item item) {
-  return item.deleted || !item.countable ? 0 : item.length;
+  return ContentTextIndex.visibleLength(item);
 }
 
 AbsolutePosition? _absoluteFromItem(
@@ -139,9 +154,18 @@ AbsolutePosition? _absoluteFromItem(
     return null;
   }
 
-  var index = contentLength(item) == 0
-      ? 0
-      : resolved.diff + (position.assoc >= 0 ? 0 : 1);
+  final visibleLength = contentLength(item);
+  final usesDefaultTextIndex = identical(
+    contentLength,
+    defaultRelativeContentLength,
+  );
+  var index = _relativeOffsetAtClock(
+    item,
+    resolved.diff,
+    visibleLength: visibleLength,
+    assoc: position.assoc,
+    usesDefaultTextIndex: usesDefaultTextIndex,
+  );
   var left = item.left;
   while (left != null) {
     index += contentLength(left);
@@ -152,6 +176,34 @@ AbsolutePosition? _absoluteFromItem(
     index: index,
     assoc: position.assoc,
   );
+}
+
+int _clockOffsetAtRelativeOffset(
+  Item item,
+  int relativeOffset, {
+  required bool usesDefaultTextIndex,
+}) {
+  if (usesDefaultTextIndex) {
+    return ContentTextIndex.clockOffsetAtTextOffset(item, relativeOffset);
+  }
+  return relativeOffset;
+}
+
+int _relativeOffsetAtClock(
+  Item item,
+  int clockOffset, {
+  required int visibleLength,
+  required int assoc,
+  required bool usesDefaultTextIndex,
+}) {
+  if (visibleLength == 0) {
+    return 0;
+  }
+  if (!usesDefaultTextIndex) {
+    return min(clockOffset + (assoc < 0 ? 1 : 0), visibleLength);
+  }
+  final floor = ContentTextIndex.textOffsetAtClockOffset(item, clockOffset);
+  return assoc < 0 ? min(floor + 1, visibleLength) : floor;
 }
 
 AbsolutePosition? _absoluteFromTypeId(
@@ -175,11 +227,7 @@ AbsolutePosition? _absoluteFromTypeId(
   return AbsolutePosition(type: type, index: index, assoc: position.assoc);
 }
 
-FollowRedoneResult? _resolveItem(
-  Doc doc,
-  Id id,
-  bool followRedoneItems,
-) {
+FollowRedoneResult? _resolveItem(Doc doc, Id id, bool followRedoneItems) {
   try {
     if (followRedoneItems) {
       return followRedone(doc.store, id);

@@ -6,7 +6,7 @@ import 'package:dart_crdt/src/sync/apply_update.dart';
 import 'package:dart_crdt/src/sync/state_update.dart';
 import 'package:dart_crdt/src/sync/state_vector.dart';
 import 'package:dart_crdt/src/sync/update_algebra.dart';
-import 'package:test/test.dart';
+import 'package:test/test.dart' hide Skip;
 
 void main() {
   group('V1 update algebra', () {
@@ -91,7 +91,8 @@ void main() {
       expect(vector, {ClientId(1): Clock(2)});
     });
 
-    test('does not emit first-written skip output for unresolved updates', () {
+    test('does not claim a target-relative delta proves its missing prefix',
+        () {
       final unresolved = encodeStateAsUpdate(
         _docWithItem(1, 'abc'),
         encodeStateVector({ClientId(1): Clock(1)}),
@@ -99,9 +100,32 @@ void main() {
 
       expect(mergeUpdates([unresolved]), [0, 0]);
       expect(diffUpdate(unresolved, encodeStateVector(const {})), [0, 0]);
-      expect(decodeStateVector(encodeStateVectorFromUpdate(unresolved)), {
-        ClientId(1): Clock(3),
-      });
+      expect(
+        decodeStateVector(encodeStateVectorFromUpdate(unresolved)),
+        isEmpty,
+      );
+    });
+
+    test('stops a concrete state prefix before wire Skip and its tail', () {
+      final gap = _docWithConcretePrefixAndGap();
+
+      expect(
+        decodeStateVector(
+          encodeStateVectorFromUpdate(encodeStateAsUpdate(gap)),
+        ),
+        {ClientId(7): Clock(2)},
+      );
+      expect(
+        decodeStateVector(
+          encodeStateVectorFromUpdate(
+            encodeStateAsUpdate(
+              Doc(clientId: ClientId(90))
+                ..store.add(Skip(id: _id(7, 0), length: 3)),
+            ),
+          ),
+        ),
+        isEmpty,
+      );
     });
   });
 
@@ -123,7 +147,68 @@ void main() {
         ClientId(2): Clock(1),
       });
     });
+
+    test('extracts only a zero-based concrete prefix around gaps', () {
+      final gap = _docWithConcretePrefixAndGap();
+      final relative = encodeStateAsUpdateV2(
+        _docWithItem(1, 'abc'),
+        encodeStateVector({ClientId(1): Clock(1)}),
+      );
+
+      expect(
+        decodeStateVector(
+          encodeStateVectorFromUpdateV2(encodeStateAsUpdateV2(gap)),
+        ),
+        {ClientId(7): Clock(2)},
+      );
+      expect(
+        decodeStateVector(encodeStateVectorFromUpdateV2(relative)),
+        isEmpty,
+      );
+      expect(
+        decodeStateVector(
+          encodeStateVectorFromUpdateV2(
+            encodeStateAsUpdateV2(
+              Doc(clientId: ClientId(90))
+                ..store.add(Skip(id: _id(7, 0), length: 3)),
+            ),
+          ),
+        ),
+        isEmpty,
+      );
+    });
   });
+}
+
+Doc _docWithConcretePrefixAndGap() {
+  final doc = Doc(clientId: ClientId(90));
+  final parent = doc.itemParentForKey('root');
+  doc.store
+    ..add(
+      Item(
+        id: _id(7, 0),
+        parent: parent,
+        content: ContentString('a'),
+      ),
+    )
+    ..add(
+      Item(
+        id: _id(7, 1),
+        origin: _id(7, 0),
+        parent: parent,
+        content: ContentEmbed({'kind': 'prefix-boundary'}),
+      ),
+    )
+    ..add(Skip(id: _id(7, 2), length: 2))
+    ..add(
+      Item(
+        id: _id(7, 4),
+        origin: _id(7, 1),
+        parent: parent,
+        content: ContentString('z'),
+      ),
+    );
+  return doc;
 }
 
 Doc _docWithItem(int client, String text) {

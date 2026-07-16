@@ -5,7 +5,7 @@
 <hr>
 
 <p align="center">
-<a href="https://github.com/salakar/ycrdt/blob/main/COVERAGE.md">Coverage: 95.21%</a>
+<a href="https://github.com/salakar/ycrdt/blob/main/COVERAGE.md">Coverage: 96.02%</a>
 </p>
 
 ## Overview
@@ -31,7 +31,7 @@ compatibility-oriented fixtures for VM, Flutter, and web runtimes.
 
 ```yaml
 dependencies:
-  dart_crdt: ^0.2.0
+  dart_crdt: ^0.4.0
 ```
 
 ```dart
@@ -95,6 +95,18 @@ final merged = mergeUpdates([update]);
 final stateVector = encodeStateVectorFromUpdate(merged);
 final missing = diffUpdate(merged, stateVector);
 ```
+
+`encodeStateVectorFromUpdate` and its V2 counterpart report only concrete
+client clocks that the update proves contiguously from clock zero. Wire `Skip`
+framing, unresolved ranges, and target-relative deltas that begin above zero do
+not claim the missing prefix. When inspecting a target-relative delta, combine
+the extracted vector with the target vector that was used to produce it.
+
+In `0.4.0`, merge/diff, update-format conversion, and update obfuscation are
+safe only for causally complete input. They currently materialize a temporary
+document and omit unresolved structs. Providers that accept out-of-order
+updates must retain the original update journal until all pending dependencies
+have integrated; `encodeStateAsUpdate` also emits integrated state only.
 
 ## Awareness And Presence
 
@@ -170,10 +182,27 @@ undoManager.destroy();
 Tracked origins, capture timeouts, delete filters, stack events, and scoped
 undo/redo are supported.
 
+## Diff Attribution And Suggestions
+
+`DiffAttributionManager` can accept or reject all changes between two
+documents. The range-shaped `acceptChanges` and `rejectChanges` methods remain
+source-compatible in `0.4.0`, but arbitrary partial decisions fail closed with
+`UnsupportedError`: they are supported only when the supplied range covers all
+remaining suggestions, in which case they delegate to `acceptAllChanges` or
+`rejectAllChanges`. This avoids manufacturing a non-contiguous causal history.
+
+Rejecting all changes synchronizes the complete post-undo state to both
+documents, including insertion tombstones and ids created while restoring
+deletions, so later successor and adjacent edits can integrate normally.
+
 ## Relative Positions
 
 Relative positions anchor to CRDT content and can be encoded, stored, sent over
 the network, and resolved against a document later.
+
+Shared-text indexes use Unicode scalar values, matching Dart `String.runes` and
+the package's text mutation APIs. The portable wire format still uses UTF-16
+clocks; relative-position helpers convert between the two units.
 
 ```dart
 final source = Doc(clientId: ClientId(1));
@@ -226,8 +255,21 @@ checks.
 
 ## Stability
 
-`0.2.0` is a pre-1.0 release. Public APIs may change before `1.0.0`,
+`0.4.0` is a pre-1.0 release. Public APIs may change before `1.0.0`,
 but binary behavior is covered by regression fixtures and compatibility tests.
+
+Current known limitations:
+
+- Binary merge/diff, format conversion, and obfuscation omit unresolved structs
+  from causally incomplete input. Keep the original update bytes until their
+  dependencies have integrated.
+- `encodeStateAsUpdate` and `encodeStateAsUpdateV2` do not yet re-emit raw
+  pending struct updates.
+- Arbitrary partial `DiffAttributionManager` accept/reject decisions are not
+  supported; select all remaining suggestions or use the explicit all-change
+  methods.
+- Formatting attributes applied through root or nested `SharedText` APIs are
+  not yet stored in CRDT structs. Plain text syncs, but formatting runs do not.
 
 ## Contributing
 

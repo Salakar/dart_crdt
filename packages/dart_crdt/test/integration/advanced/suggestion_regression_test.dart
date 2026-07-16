@@ -21,19 +21,24 @@ void main() {
       expect(advancedRootText(next), isNot(contains('only')));
     });
 
-    test('accepts and rejects inclusive selected suggestion ranges', () {
+    test('fails closed for partial ranges and accepts the complete range', () {
       final previous = Doc(gc: false);
       final next = Doc(gc: false, clientId: ClientId(9));
       applyAdvancedUpdate(next, advancedTextDoc(3, 'abcd'));
       final manager = createAttributionManagerFromDiff(previous, next);
 
-      manager.acceptChanges(advancedId(3, 1), advancedId(3, 2));
-      manager.rejectChanges(advancedId(3, 0), advancedId(3, 0));
+      expect(
+        () => manager.acceptChanges(advancedId(3, 1), advancedId(3, 2)),
+        throwsA(isA<UnsupportedError>()),
+      );
+      expect(advancedRootText(previous), isEmpty);
+      expect(advancedRootText(next), 'abcd');
 
-      expect(advancedRootText(previous), 'bc');
-      expect(advancedRootText(next), 'bcd');
-      expect(manager.suggestedChanges.inserts.hasId(advancedId(3, 0)), isFalse);
-      expect(manager.suggestedChanges.inserts.hasId(advancedId(3, 3)), isTrue);
+      manager.acceptChanges(advancedId(3, 0), advancedId(3, 3));
+
+      expect(advancedRootText(previous), 'abcd');
+      expect(advancedRootText(next), 'abcd');
+      expect(manager.suggestedChanges, ContentIds.empty());
     });
   });
 }

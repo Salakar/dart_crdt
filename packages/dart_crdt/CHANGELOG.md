@@ -1,5 +1,141 @@
 # Changelog
 
+## 0.4.0
+
+Corrects three collaboration-critical boundaries: wire `Skip` structs are now
+framing metadata rather than persistent state, shared-text relative positions
+now convert between Unicode-scalar indexes and UTF-16 wire clocks, and
+awareness updates apply atomically with source-safe timeout clocks.
+
+### API Changes
+
+- No public signatures were removed or renamed.
+- `DiffAttributionManager.acceptChanges` and `rejectChanges` remain available,
+  but now throw `UnsupportedError` before mutation for arbitrary partial
+  selections. A range covering all remaining suggestions delegates to the
+  corresponding all-change method. This is a fail-closed behavioral correction
+  for a path that could create non-contiguous causal history.
+- `defaultRelativeContentLength` now reports Unicode scalar values for
+  `ContentString` items instead of UTF-16 clock units. This matches
+  `SharedType.length`, `insertText`, and `deleteText`.
+- `encodeStateAsUpdate` and `encodeStateAsUpdateV2` no longer synthesize wire
+  `Skip` structs for causally pending ranges. They emit integrated state and the
+  safe pending delete set only.
+- Added `validateUpdate` and `validateUpdateV2` for non-mutating validation of
+  complete binary frames before using low-level streaming decoder APIs.
+
+### Fixes
+
+- Incoming V1/V2 wire `Skip` structs now advance only the decoder's clock. They
+  are never integrated, added to pending block ranges, counted as applied, or
+  allowed to advance a receiver's state vector. This prevents a relay snapshot
+  from permanently masking the genuine struct that later arrives at a skipped
+  clock.
+- `encodeStateVectorFromUpdate` and `encodeStateVectorFromUpdateV2` now stop at
+  wire-skip, unresolved, or other clock gaps and advertise only a concrete
+  prefix proven from clock zero. Target-relative deltas no longer claim an
+  unseen prefix.
+- Byte-identical causally pending frames are deduplicated per wire version.
+  Redelivery no longer grows the retry queue or repeats retry work, while V1
+  and V2 frames remain distinct.
+- Fixed the deterministic three-replica corruption where a relay received `Y`
+  before `X`, inserted concurrent `Z`, and exported a skip-framed update. The
+  target now converges from `abc` to `abcZXY` for V1 and V2, including payloads
+  emitted by older peers.
+- Relative-position creation now maps an in-item scalar offset to its UTF-16
+  clock, and resolution maps the clock back with floor semantics inside a
+  surrogate pair. Both association directions work across emoji, ZWJ
+  sequences, combining marks, flags, and split string items.
+- Shared-text deletion and relative positions now reuse one scalar/clock
+  conversion helper, preventing the two paths from drifting again.
+- Arbitrary partial suggestion decisions now fail before either document is
+  mutated. Complete-range decisions delegate to the causal-safe all-change
+  paths.
+- Rejecting all suggestions now applies the complete post-undo state back to
+  the comparison document. Both sides therefore integrate restored ids and
+  insertion tombstones before successor or adjacent edits arrive.
+- Undo restoration preserves a split item's live right boundary, so rejecting
+  an interior deletion restores content before its original right neighbor.
+- Awareness updates are now decoded and validated completely before any state
+  or event mutation, so malformed provider frames cannot partially commit.
+- Timing out a remote awareness client now emits an equal-clock tombstone. The
+  tombstone wins over the currently visible state without claiming the source's
+  next clock, allowing its first subsequent presence update to recover.
+- An echoed timeout tombstone can no longer hide the owning client's local
+  awareness state. Its local clock advances beyond accepted self clocks and the
+  tombstone so the live payload can be re-fanned immediately.
+- `applyUpdate` and `applyUpdateV2` now preflight the complete binary frame
+  before opening a live document transaction. A malformed or trailing-byte
+  payload can no longer integrate a valid prefix and then report failure.
+- Low-level `readUpdate` and `readUpdateV2` now retain the decoder's complete
+  original frame for pending retries and retry pending structs/deletes after a
+  dependency integrates. V2 no longer mistakes its rest substream for the full
+  ten-stream frame. Their existing no-`Doc.update` event behavior is unchanged.
+
+### Compatibility Summary
+
+- The V1/V2 wire layout is unchanged and remains reference-compatible. The
+  behavioral change is that received wire `Skip` is interpreted as framing,
+  matching the reference semantics, instead of becoming document state.
+- Full-state bytes from a document with unresolved pending structs change:
+  0.3.x fabricated `Skip` ranges, while 0.4.0 omits those ranges. Providers must
+  retain the original update journal until dependencies integrate.
+- Update-only state-vector extraction is deliberately conservative: a
+  target-relative update cannot establish clocks before its own starting
+  clock. Callers with that context should combine the extracted prefix with the
+  known target vector.
+- Relative-position wire IDs after astral Unicode may differ from 0.3.x because
+  0.4.0 anchors the requested scalar rather than treating the scalar index as a
+  UTF-16 clock. Existing anchors inside a surrogate pair resolve to the scalar's
+  leading boundary for non-negative association and after it for negative
+  association.
+- Custom relative-position length callbacks retain the legacy one-visible-unit-
+  per-clock behavior even when they happen to return the same value as
+  `defaultRelativeContentLength`.
+
+### Benchmark Summary
+
+- Public update application performs one isolated structural decode before the
+  live decode/integration pass. In the full suite, the V1 and V2 sync workloads
+  completed at 8.16 and 8.23 ms/iteration respectively. Scalar/clock conversion
+  is linear only within the compound string item being positioned or edited.
+- The 24-case full benchmark suite passed. The slowest case was
+  `array_random_insert_delete_nested` at 76.40 ms/iteration, below the 500 ms
+  release threshold.
+
+### Known Limitations
+
+- `mergeUpdates`, `mergeUpdatesV2`, `diffUpdate`, and `diffUpdateV2` still
+  materialize a temporary document and omit causally unresolved structs.
+- V1/V2 update-format conversion and update obfuscation have the same pending
+  data limitation. Do not use their output as the sole durable copy of a
+  causally incomplete update.
+- `encodeStateAsUpdate` does not yet merge raw pending update bytes into its
+  output. Retain the source update journal until `pendingStructs` is empty.
+- Arbitrary partial diff-suggestion acceptance/rejection remains unsupported;
+  complete-range and all-change decisions are causal-safe.
+- Formatting attributes applied through root or nested `SharedText` APIs are
+  not yet stored in the struct store. Plain text syncs, but formatting runs do
+  not.
+- The default unnamed root (`''`) is not store-backed; use a named root for
+  store-backed maps, arrays, and text.
+
+### Verification
+
+- `fvm dart format --output=none --set-exit-if-changed packages/dart_crdt/lib packages/dart_crdt/test`
+- `fvm dart analyze`
+- Focused Skip, fixed-delta topology, relative-position Unicode, state-update,
+  pending-retry, compatibility, and sequential suggestion tests.
+- `fvm dart test`
+- `fvm dart run tool/run_long_random_tests.dart`
+- `fvm dart test --coverage=coverage` plus coverage validation
+- `fvm dart run benchmark/benchmark.dart --mode=full`
+- `fvm dart run tool/run_js_smoke.dart`
+- `fvm dart doc --validate-links`
+- `fvm dart run tool/validate_repository.dart`
+- `fvm dart run tool/validate_release.dart`
+- `fvm dart pub publish --dry-run` from a clean package copy
+
 ## 0.3.0
 
 Store-backed maps, arrays, and nested shared types. These now serialize over the

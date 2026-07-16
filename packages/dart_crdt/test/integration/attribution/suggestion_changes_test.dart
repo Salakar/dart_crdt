@@ -46,17 +46,33 @@ void main() {
       expect(_text(rejectNext), 'stay');
     });
 
-    test('accepts and rejects selected ranges', () {
+    test('range APIs delegate when the range covers every remaining change',
+        () {
       final previous = Doc(gc: false);
       final next = Doc(gc: false, clientId: ClientId(9));
       applyUpdate(next, encodeStateAsUpdate(_sourceText(1, 'abc')));
       final manager = createAttributionManagerFromDiff(previous, next);
 
-      manager.acceptChanges(_id(1, 0));
-      manager.rejectChanges(_id(1, 1));
+      manager.acceptChanges(_id(1, 0), _id(1, 2));
 
-      expect(_text(previous), 'a');
-      expect(_text(next), 'ac');
+      expect(_text(previous), 'abc');
+      expect(manager.suggestedChanges, ContentIds.empty());
+
+      final rejectPrevious = Doc(gc: false);
+      final rejectNext = Doc(gc: false, clientId: ClientId(10));
+      applyUpdate(rejectNext, encodeStateAsUpdate(_sourceText(2, 'xyz')));
+      final rejectManager = createAttributionManagerFromDiff(
+        rejectPrevious,
+        rejectNext,
+      );
+      rejectManager.rejectChanges(_id(2, 0), _id(2, 2));
+
+      expect(_text(rejectPrevious), isEmpty);
+      expect(_text(rejectNext), isEmpty);
+      expect(
+        rejectPrevious.store.stateVector(),
+        rejectNext.store.stateVector(),
+      );
     });
 
     test('syncs target updates by origin when suggestion mode is disabled', () {
@@ -139,8 +155,8 @@ Doc _sourceText(int client, String text, {bool deleted = false}) {
   return doc;
 }
 
-Doc _integrated(Doc source) {
-  final doc = Doc(gc: false, clientId: ClientId(90));
+Doc _integrated(Doc source, [int client = 90]) {
+  final doc = Doc(gc: false, clientId: ClientId(client));
   applyUpdate(doc, encodeStateAsUpdate(source));
   return doc;
 }

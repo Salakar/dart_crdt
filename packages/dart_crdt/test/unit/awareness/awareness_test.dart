@@ -67,6 +67,72 @@ void main() {
       expect(left.localState, isNull);
     });
 
+    test('remote timeout tombstone allows the source next clock to recover',
+        () {
+      final source = Awareness(localClientId: ClientId(1));
+      final target = Awareness(localClientId: ClientId(2));
+      final relay = Awareness(localClientId: ClientId(3));
+
+      final first = source.setLocalState({'cursor': 1});
+      target.applyAwarenessUpdate(first);
+      relay.applyAwarenessUpdate(first);
+
+      final timeout = target.removeAwarenessStates({ClientId(1)});
+      final relayChange = relay.applyAwarenessUpdate(timeout);
+      expect(relayChange.removed, {ClientId(1)});
+      expect(relay.states, isNot(contains(ClientId(1))));
+      expect(relay.applyAwarenessUpdate(timeout).isEmpty, isTrue);
+      expect(relay.applyAwarenessUpdate(first).isEmpty, isTrue);
+      expect(relay.states, isNot(contains(ClientId(1))));
+
+      final recovered = source.setLocalState({'cursor': 2});
+      final targetChange = target.applyAwarenessUpdate(recovered);
+      final relayRecovery = relay.applyAwarenessUpdate(recovered);
+
+      expect(targetChange.added, {ClientId(1)});
+      expect(relayRecovery.added, {ClientId(1)});
+      expect(target.states[ClientId(1)]!.toObject(), {'cursor': 2});
+      expect(relay.states[ClientId(1)]!.toObject(), {'cursor': 2});
+    });
+
+    test('echoed own tombstone preserves and advances local state', () {
+      final source = Awareness(localClientId: ClientId(1));
+      final target = Awareness(localClientId: ClientId(2));
+      final first = source.setLocalState({'cursor': 1});
+      target.applyAwarenessUpdate(first);
+      final timeout = target.removeAwarenessStates({ClientId(1)});
+
+      final protected = source.applyAwarenessUpdate(timeout);
+
+      expect(protected.updated, {ClientId(1)});
+      expect(source.localState!.clock, 2);
+      expect(source.localState!.toObject(), {'cursor': 1});
+      final refanned = target.applyAwarenessUpdate(
+        source.encodeAwarenessUpdate(clients: {ClientId(1)}),
+      );
+      expect(refanned.added, {ClientId(1)});
+
+      final movement = source.setLocalState({'cursor': 2});
+      expect(source.localState!.clock, 3);
+      expect(target.applyAwarenessUpdate(movement).updated, {ClientId(1)});
+      expect(target.states[ClientId(1)]!.toObject(), {'cursor': 2});
+    });
+
+    test('accepted self clocks advance the next local clock', () {
+      final source = Awareness(localClientId: ClientId(1));
+      final sameIdPeer = Awareness(localClientId: ClientId(1));
+      for (var index = 0; index < 4; index += 1) {
+        source.setLocalState({'cursor': index});
+      }
+
+      sameIdPeer.applyAwarenessUpdate(source.encodeAwarenessUpdate());
+      final local = sameIdPeer.setLocalState({'cursor': 5});
+
+      expect(sameIdPeer.localState!.clock, 5);
+      expect(source.applyAwarenessUpdate(local).updated, {ClientId(1)});
+      expect(source.localState!.toObject(), {'cursor': 5});
+    });
+
     test('rejects malformed payloads', () {
       final awareness = Awareness(localClientId: ClientId(1));
 
@@ -74,6 +140,47 @@ void main() {
         () => awareness.applyAwarenessUpdate([1, 1, 1, 2]),
         throwsFormatException,
       );
+    });
+
+    test('rejects a malformed frame atomically without events', () {
+      final source = Awareness(localClientId: ClientId(1));
+      final target = Awareness(localClientId: ClientId(1));
+      final changes = <AwarenessChange>[];
+      target.changes.add(changes.add);
+      for (var index = 1; index <= 4; index += 1) {
+        source.setLocalState({'cursor': index});
+      }
+      final validPrefix = source.encodeAwarenessUpdate().toList();
+      validPrefix[0] = 2;
+      validPrefix.addAll([3, 1, 2]);
+
+      expect(
+        () => target.applyAwarenessUpdate(validPrefix),
+        throwsFormatException,
+      );
+      expect(target.states, isEmpty);
+      expect(changes, isEmpty);
+      target.setLocalState({'cursor': 1});
+      expect(target.localState!.clock, 1);
+    });
+
+    test('rejects trailing bytes atomically without replacing prior state', () {
+      final source = Awareness(localClientId: ClientId(2));
+      final target = Awareness(localClientId: ClientId(1));
+      target.applyAwarenessUpdate(source.setLocalState({'cursor': 1}));
+      final changes = <AwarenessChange>[];
+      target.changes.add(changes.add);
+      final malformed = <int>[
+        ...source.setLocalState({'cursor': 2}),
+        0,
+      ];
+
+      expect(
+        () => target.applyAwarenessUpdate(malformed),
+        throwsFormatException,
+      );
+      expect(target.states[ClientId(2)]!.toObject(), {'cursor': 1});
+      expect(changes, isEmpty);
     });
   });
 }

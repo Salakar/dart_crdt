@@ -11,6 +11,21 @@ import 'package:test/test.dart' hide Skip;
 
 void main() {
   group('applyUpdate', () {
+    test('validates complete V1 and V2 frames without a document', () {
+      expect(
+        () => validateUpdate(encodeStateAsUpdate(_docWithItem('v1'))),
+        returnsNormally,
+      );
+      expect(
+        () => validateUpdateV2(encodeStateAsUpdateV2(_docWithItem('v2'))),
+        returnsNormally,
+      );
+      expect(
+        () => validateUpdate(const [0, 0, 99]),
+        throwsA(isA<MalformedUpdateException>()),
+      );
+    });
+
     test('applies full V1 state and ignores duplicate updates', () {
       final source = _docWithItem('hi');
       final target = Doc(clientId: ClientId(8));
@@ -96,6 +111,27 @@ void main() {
         throwsA(isA<MalformedUpdateException>()),
       );
     });
+
+    test('rejects a valid prefix plus trailing bytes atomically', () {
+      final target = Doc(clientId: ClientId(8));
+      final updates = <DocUpdateEvent>[];
+      final transactions = <Transaction>[];
+      target.update.add(updates.add);
+      target.afterTransaction.add(transactions.add);
+      final malformed = <int>[
+        ...encodeStateAsUpdate(_docWithItem('valid')),
+        99,
+      ];
+
+      expect(
+        () => applyUpdate(target, malformed),
+        throwsA(isA<MalformedUpdateException>()),
+      );
+      expect(target.store.isEmpty, isTrue);
+      expect(_rootText(target), isEmpty);
+      expect(updates, isEmpty);
+      expect(transactions, isEmpty);
+    });
   });
 
   group('applyUpdateV2', () {
@@ -112,6 +148,27 @@ void main() {
       expect(events, hasLength(1));
       expect(events.single.origin, 'v2');
       expect(events.single.version, 2);
+    });
+
+    test('rejects a valid prefix plus trailing bytes atomically', () {
+      final target = Doc(clientId: ClientId(8));
+      final updates = <DocUpdateEvent>[];
+      final transactions = <Transaction>[];
+      target.updateV2.add(updates.add);
+      target.afterTransaction.add(transactions.add);
+      final malformed = <int>[
+        ...encodeStateAsUpdateV2(_docWithItem('valid')),
+        99,
+      ];
+
+      expect(
+        () => applyUpdateV2(target, malformed),
+        throwsA(isA<MalformedUpdateException>()),
+      );
+      expect(target.store.isEmpty, isTrue);
+      expect(_rootText(target), isEmpty);
+      expect(updates, isEmpty);
+      expect(transactions, isEmpty);
     });
   });
 }

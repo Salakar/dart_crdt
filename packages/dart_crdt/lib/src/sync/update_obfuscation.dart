@@ -29,7 +29,10 @@ final class UpdateObfuscationOptions {
   final bool preserveTypeNames;
 }
 
-/// Obfuscates user content in a V1 [update] while preserving CRDT metadata.
+/// Obfuscates user content in a causally complete V1 [update].
+///
+/// Unresolved structs are currently omitted while materializing the update, so
+/// this must not be used as the sole durable copy of causally gapped input.
 Uint8List obfuscateUpdate(
   List<int> update, {
   UpdateObfuscationOptions options = const UpdateObfuscationOptions(),
@@ -40,7 +43,10 @@ Uint8List obfuscateUpdate(
   return encodeStateAsUpdate(doc);
 }
 
-/// Obfuscates user content in a V2 [update] while preserving CRDT metadata.
+/// Obfuscates user content in a causally complete V2 [update].
+///
+/// Unresolved structs are currently omitted while materializing the update, so
+/// this must not be used as the sole durable copy of causally gapped input.
 Uint8List obfuscateUpdateV2(
   List<int> update, {
   UpdateObfuscationOptions options = const UpdateObfuscationOptions(),

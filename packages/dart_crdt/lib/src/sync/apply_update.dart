@@ -20,36 +20,41 @@ import 'update_decoder.dart';
 part 'apply_update_target.dart';
 part 'apply_update_struct_reader.dart';
 part 'apply_update_decoder_ops.dart';
+part 'apply_update_validation.dart';
+
+/// Validates a complete V1 [update] without mutating a document.
+void validateUpdate(List<int> update) {
+  _validateUpdateBytes(update, 1);
+}
+
+/// Validates a complete V2 [update] without mutating a document.
+void validateUpdateV2(List<int> update) {
+  _validateUpdateBytes(update, 2);
+}
 
 /// Applies a V1 [update] to [document].
-void applyUpdate(
-  Doc document,
-  List<int> update, {
-  Object? origin,
-}) {
-  _applyUpdateBytes(
-    document,
-    update,
-    origin: origin,
-    version: 1,
-  );
+///
+/// The complete binary frame is validated before [document] is mutated.
+void applyUpdate(Doc document, List<int> update, {Object? origin}) {
+  _applyUpdateBytes(document, update, origin: origin, version: 1);
 }
 
 /// Applies a V2 [update] to [document].
-void applyUpdateV2(
-  Doc document,
-  List<int> update, {
-  Object? origin,
-}) {
-  _applyUpdateBytes(
-    document,
-    update,
-    origin: origin,
-    version: 2,
-  );
+///
+/// The complete binary frame is validated before [document] is mutated.
+void applyUpdateV2(Doc document, List<int> update, {Object? origin}) {
+  _applyUpdateBytes(document, update, origin: origin, version: 2);
 }
 
 /// Reads and applies a V1 update from [decoder].
+///
+/// This is a low-level streaming API. Validate untrusted complete frames with
+/// [validateUpdate] before constructing or consuming [decoder].
+///
+/// Causally pending frames are retained from [decoder]'s complete original
+/// bytes and retried when this call integrates a missing dependency. As in
+/// earlier releases, this low-level API does not emit [Doc.update]; use
+/// [applyUpdate] when provider-facing update events are required.
 void readUpdate(
   UpdateDecoderV1 decoder,
   Doc document, {
@@ -58,12 +63,16 @@ void readUpdate(
 }) {
   document.transact(
     (transaction) {
-      _readDecodedUpdate(
+      final applied = _readDecodedUpdate(
         decoder,
         transaction,
-        updateBytes: update ?? decoder.restReader.toBytes(),
+        updateBytes: update ?? decoder.originalBytes,
         version: 1,
       );
+      if (applied) {
+        _retryPendingStructs(transaction);
+        _retryPendingDeleteSet(transaction);
+      }
     },
     origin: origin,
     local: false,
@@ -71,6 +80,14 @@ void readUpdate(
 }
 
 /// Reads and applies a V2 update from [decoder].
+///
+/// This is a low-level streaming API. Validate untrusted complete frames with
+/// [validateUpdateV2] before constructing or consuming [decoder].
+///
+/// Causally pending frames are retained from [decoder]'s complete composed
+/// bytes and retried when this call integrates a missing dependency. As in
+/// earlier releases, this low-level API does not emit [Doc.updateV2]; use
+/// [applyUpdateV2] when provider-facing update events are required.
 void readUpdateV2(
   UpdateDecoderV2 decoder,
   Doc document, {
@@ -79,12 +96,16 @@ void readUpdateV2(
 }) {
   document.transact(
     (transaction) {
-      _readDecodedUpdate(
+      final applied = _readDecodedUpdate(
         decoder,
         transaction,
-        updateBytes: update ?? decoder.restReader.toBytes(),
+        updateBytes: update ?? decoder.originalBytes,
         version: 2,
       );
+      if (applied) {
+        _retryPendingStructs(transaction);
+        _retryPendingDeleteSet(transaction);
+      }
     },
     origin: origin,
     local: false,
@@ -97,6 +118,10 @@ void _applyUpdateBytes(
   required Object? origin,
   required int version,
 }) {
+  // Transactions do not roll back integrated structs when decoding throws.
+  // Fully consume an isolated decoder first so malformed/truncated/trailing
+  // input is rejected before the live document opens a transaction.
+  _validateUpdateBytes(update, version);
   var applied = false;
   document.transact(
     (transaction) {
@@ -161,9 +186,15 @@ bool _readDecodedUpdate(
         transaction.doc,
         Id(client: client, clock: clock),
       );
-      blocks.add(struct.id, length: struct.length);
-      final didApply = _integrateStruct(struct, target, missing);
-      applied = applied || didApply;
+      // A wire Skip only frames a clock gap inside this update. It is not
+      // document state and must never advance the receiver's store clock; doing
+      // so would cause the genuine struct for that clock to be discarded when
+      // it arrives later.
+      if (struct is! Skip) {
+        blocks.add(struct.id, length: struct.length);
+        final didApply = _integrateStruct(struct, target, missing);
+        applied = applied || didApply;
+      }
       clock = Clock(struct.end);
     }
   }
@@ -180,11 +211,7 @@ bool _readDecodedUpdate(
     transaction.doc.store
       ..addPendingStructs(blocks)
       ..addPendingStructUpdate(
-        PendingStructs(
-          missing: missing,
-          update: updateBytes,
-          version: version,
-        ),
+        PendingStructs(missing: missing, update: updateBytes, version: version),
       );
   }
   return applied;
@@ -195,6 +222,12 @@ bool _integrateStruct(
   _UpdateIntegrationTarget target,
   Map<ClientId, Clock> missing,
 ) {
+  // Defensive invariant: decoded wire Skip structs are framing only. Internal
+  // store code may still use Skip placeholders for diagnostics/repair, but the
+  // update integration path must never persist one received from a peer.
+  if (struct is Skip) {
+    return false;
+  }
   final store = target.store;
   final localClock = store.getClock(struct.id.client);
   if (struct.id.clock.value > localClock.value) {
@@ -212,11 +245,7 @@ bool _integrateStruct(
   return true;
 }
 
-bool _prepareItem(
-  Item item,
-  StructStore store,
-  Map<ClientId, Clock> missing,
-) {
+bool _prepareItem(Item item, StructStore store, Map<ClientId, Clock> missing) {
   var hasMissingDependency = false;
   for (final id in [item.origin, item.rightOrigin]) {
     if (id != null && store.itemContaining(id) == null) {

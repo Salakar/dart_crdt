@@ -14,11 +14,11 @@ import '../structs/abstract_struct.dart';
 import '../structs/id.dart';
 import '../sync/apply_update.dart';
 import '../sync/state_update.dart';
-import '../sync/update_content_ids.dart';
 import '../undo/undo_manager.dart';
 import 'attribution_manager.dart';
 
 part 'diff_snapshot_attribution_event.dart';
+part 'diff_snapshot_attribution_ids.dart';
 
 /// Attribution manager that describes content differences between documents.
 final class DiffAttributionManager implements AttributionManager {
@@ -78,31 +78,61 @@ final class DiffAttributionManager implements AttributionManager {
     applyUpdate(previousDoc, encodeStateAsUpdate(nextDoc), origin: this);
   }
 
-  /// Reverts all suggested changes from [nextDoc] unless GC removed content.
+  /// Reverts all suggested changes and synchronizes the resulting causal state.
+  ///
+  /// Undoing a deletion creates redone item ids, while undoing an insertion
+  /// creates tombstones. The complete post-undo state is therefore applied to
+  /// [previousDoc] so both documents know those ids before later successor or
+  /// adjacent edits arrive.
   void rejectAllChanges() {
-    undoContentIds(nextDoc, suggestedChanges);
+    final changes = suggestedChanges;
+    if (changes.isEmpty) {
+      return;
+    }
+    undoContentIds(nextDoc, changes);
+    applyUpdate(previousDoc, encodeStateAsUpdate(nextDoc), origin: this);
   }
 
-  /// Applies suggested changes in the inclusive id range [start] to [end].
+  /// Applies all remaining suggestions when [start] through [end] selects all.
+  ///
+  /// Arbitrary partial reconciliation is not causal-safe in this release and
+  /// throws [UnsupportedError] before mutating either document. The method
+  /// signature remains available for source compatibility; use
+  /// [acceptAllChanges] or pass a range that covers every remaining suggestion.
   void acceptChanges(Id start, [Id? end]) {
-    final selected = _selectedChanges(start, end);
-    if (selected.isEmpty) {
+    final remaining = suggestedChanges;
+    if (remaining.isEmpty) {
       return;
     }
-    applyUpdate(
-      previousDoc,
-      intersectUpdateWithContentIds(encodeStateAsUpdate(nextDoc), selected),
-      origin: this,
-    );
+    final selected = _selectedChanges(start, end);
+    if (selected != remaining) {
+      throw UnsupportedError(
+        'Partial suggestion acceptance is not causal-safe; '
+        'select all remaining suggestions or call acceptAllChanges().',
+      );
+    }
+    acceptAllChanges();
   }
 
-  /// Reverts suggested changes in the inclusive id range [start] to [end].
+  /// Rejects all remaining suggestions when [start] through [end] selects all.
+  ///
+  /// Arbitrary partial reconciliation is not causal-safe in this release and
+  /// throws [UnsupportedError] before mutating either document. The method
+  /// signature remains available for source compatibility; use
+  /// [rejectAllChanges] or pass a range that covers every remaining suggestion.
   void rejectChanges(Id start, [Id? end]) {
-    final selected = _selectedChanges(start, end);
-    if (selected.isEmpty) {
+    final remaining = suggestedChanges;
+    if (remaining.isEmpty) {
       return;
     }
-    undoContentIds(nextDoc, selected);
+    final selected = _selectedChanges(start, end);
+    if (selected != remaining) {
+      throw UnsupportedError(
+        'Partial suggestion rejection is not causal-safe; '
+        'select all remaining suggestions or call rejectAllChanges().',
+      );
+    }
+    rejectAllChanges();
   }
 
   @override
@@ -228,24 +258,6 @@ IdMap _extractAttributions(IdMap attributes, IdSet ids) {
   final gaps = ids.diff(attributed.toIdSet());
   return attributed.merged(IdMap.fromIdSet(gaps, const <ContentAttribute>[]));
 }
-
-IdSet _documentIds(Doc doc) {
-  final ids = IdSet();
-  for (final client in doc.store.clients) {
-    for (final struct in doc.store.structsFor(client)) {
-      if (struct is! Item ||
-          struct.deleted ||
-          struct.ref == contentDeletedRef) {
-        continue;
-      }
-      ids.addRange(client, struct.range);
-    }
-  }
-  return ids;
-}
-
-IdSet _deleteIds(Doc doc) =>
-    createDeleteSetFromStore(doc.store).merged(doc.store.pendingDeleteSet);
 
 IdMap _snapshotInserts(Snapshot previous, Snapshot next) {
   final ids = IdSet();

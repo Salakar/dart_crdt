@@ -5,7 +5,7 @@
 <hr>
 
 <p align="center">
-<a href="COVERAGE.md">Coverage: 95.21%</a>
+<a href="COVERAGE.md">Coverage: 96.02%</a>
 </p>
 
 ## Overview

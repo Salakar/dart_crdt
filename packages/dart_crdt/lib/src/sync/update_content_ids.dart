@@ -26,6 +26,10 @@ ContentIds createContentIdsFromUpdateV2(List<int> update) {
 }
 
 /// Returns the V1 subset of [update] selected by [contentIds].
+///
+/// A subset that starts after an omitted client clock is causally incomplete.
+/// Apply it only to a document that already contains the omitted prefix; wire
+/// `Skip` records describe the gap but do not create document state.
 Uint8List intersectUpdateWithContentIds(
   List<int> update,
   ContentIds contentIds,
@@ -37,6 +41,10 @@ Uint8List intersectUpdateWithContentIds(
 }
 
 /// Returns the V2 subset of [update] selected by [contentIds].
+///
+/// A subset that starts after an omitted client clock is causally incomplete.
+/// Apply it only to a document that already contains the omitted prefix; wire
+/// `Skip` records describe the gap but do not create document state.
 Uint8List intersectUpdateWithContentIdsV2(
   List<int> update,
   ContentIds contentIds,
@@ -98,14 +106,14 @@ void _copySelectedStructs({
             ),
           );
         }
-        target.store.add(_copySlice(slice, target, selected));
+        target.store.add(_copySlice(slice, target));
         nextClock = slice.range.end;
       }
     }
   }
 }
 
-AbstractStruct _copySlice(StructSlice slice, Doc target, IdSet selected) {
+AbstractStruct _copySlice(StructSlice slice, Doc target) {
   final struct = slice.struct;
   if (struct is GC) {
     return GC(id: slice.id, length: slice.length);
@@ -116,8 +124,8 @@ AbstractStruct _copySlice(StructSlice slice, Doc target, IdSet selected) {
   if (struct is Item) {
     return Item(
       id: slice.id,
-      origin: _selectedOrigin(struct, slice, selected),
-      rightOrigin: _selectedRightOrigin(struct, selected),
+      origin: _sliceOrigin(struct, slice),
+      rightOrigin: struct.rightOrigin,
       parent: target.itemParentForKey(struct.parent?.key ?? 'root'),
       parentSub: struct.parentSub,
       content: _sliceContent(
@@ -130,18 +138,8 @@ AbstractStruct _copySlice(StructSlice slice, Doc target, IdSet selected) {
   throw StateError('Unsupported struct type ${struct.runtimeType}.');
 }
 
-Id? _selectedOrigin(Item struct, StructSlice slice, IdSet selected) {
-  final origin =
-      slice.offset == 0 ? struct.origin : struct.id.advance(slice.offset - 1);
-  return origin != null && selected.hasId(origin) ? origin : null;
-}
-
-Id? _selectedRightOrigin(Item struct, IdSet selected) {
-  final rightOrigin = struct.rightOrigin;
-  return rightOrigin != null && selected.hasId(rightOrigin)
-      ? rightOrigin
-      : null;
-}
+Id? _sliceOrigin(Item struct, StructSlice slice) =>
+    slice.offset == 0 ? struct.origin : struct.id.advance(slice.offset - 1);
 
 AbstractContent _sliceContent(
   AbstractContent content, {
